@@ -15,7 +15,7 @@
 
 ```bash
 # For CUDA  
-uv sync --extra cu124
+uv sync --extra cu129
 
 # For CPU  
 uv sync --extra cpu
@@ -52,7 +52,7 @@ git clone https://github.com/lnikioffic/track-anything-annotate.git
 cd track-anything-annotate
 
 # Install dependencies:
-pip install -r requirements.txt --index-url https://download.pytorch.org/whl/cu124
+pip install -r requirements.txt --index-url https://download.pytorch.org/whl/cu129
 
 # Download Models
 python checkpoints/download_models.py
