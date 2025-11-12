@@ -162,7 +162,17 @@ if __name__ == '__main__':
     f = overlay_davis(frame, unique_mask)
     mask = visualize_unique_mask(unique_mask)
     f = cv2.cvtColor(f, cv2.COLOR_BGR2RGB)
+    
+    img_rgb = cv2.cvtColor(unique_mask, cv2.COLOR_BGR2RGB)
+    colors, inverse = np.unique(img_rgb.reshape(-1, 3), axis=0, return_inverse=True)
+    mask_indices = inverse.reshape(img_rgb.shape[:2])
+    print("Классы:", np.unique(mask_indices))
+    
+    f = overlay_davis(frame, mask_indices)
+    f = cv2.cvtColor(f, cv2.COLOR_BGR2RGB)
+    mask = visualize_unique_mask(mask_indices)
+    cv2.imwrite('cats_rac_sam.png', mask)
     cv2.imshow('asd', mask)
-    cv2.imshow('asd', f)
+    cv2.imshow('asdd', f)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
