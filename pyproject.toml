@@ -19,12 +19,18 @@ dependencies = [
 ]
 
 # dependecies for sam2 if have problem with install https://github.com/facebookresearch/sam2.git
-# "setuptools>=62.3.0,<75.9",  
+# "setuptools>=62.3.0,<75.9",
 # "torch>=2.6.0",
+
 
 [tool.ruff]
 exclude = ["XMem", "XMem2"]
 
+[tool.ruff.format]
+quote-style = "single"
+
+[tool.ruff.lint]
+ignore = ["E501"]
 
 [project.optional-dependencies]
 cpu = [
