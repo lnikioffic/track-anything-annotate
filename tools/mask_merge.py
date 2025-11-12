@@ -9,7 +9,7 @@ def merge_masks(masks, method='max'):
     # Убедимся, что маски имеют корректную форму
     if len(masks.shape) != 3:
         raise ValueError(
-            "Маски должны быть представлены в виде массива размерности (N, H, W)."
+            'Маски должны быть представлены в виде массива размерности (N, H, W).'
         )
     N, H, W = masks.shape
 
@@ -28,7 +28,6 @@ def merge_masks(masks, method='max'):
         # Создаем цветную маску для текущей области
         color_mask = np.zeros_like(mask_colored)
         color_mask[masks[i] > 0] = colors[i]
-
         # Накладываем цветную маску на общее изображение
         mask_colored = cv2.addWeighted(mask_colored, 1, color_mask, 1, 0.0)
 

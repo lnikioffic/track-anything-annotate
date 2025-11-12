@@ -129,8 +129,10 @@ def main(video_path: str, names_class: list[str]):
 
     annotations: list[dict] = []
     print(len(results['keypoints']))
-    print(results)
     if len(results['keypoints']) > 1:
+        keypoints_keys = list(results['keypoints'].keys())
+        print("mult")
+        print(f"{keypoints_keys[0]} {keypoints_keys[1]}")
         process_multiple_keypoints(tracker, results, annotations)
     else:
         process_single_keypoint(tracker, results, annotations)
