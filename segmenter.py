@@ -1,12 +1,13 @@
-from sam2.build_sam import build_sam2
-from sam2.sam2_image_predictor import SAM2ImagePredictor
 import cv2
 import numpy as np
-from XMem2.inference.interact.interactive_utils import overlay_davis
+import torch
+from sam2.build_sam import build_sam2
+from sam2.sam2_image_predictor import SAM2ImagePredictor
+
 from config import DEVICE
 from tools.mask_display import visualize_unique_mask
-import torch
 from tools.mask_merge import create_mask, merge_masks
+from XMem2.inference.interact.interactive_utils import overlay_davis
 
 
 class Segmenter:
@@ -33,7 +34,6 @@ class Segmenter:
         self.embedded = False
 
     def predict(self, prompt, mode='point', multimask=True):
-
         assert self.embedded, 'dont set image'
         assert mode in ['point', 'box', 'both'], 'mode can be point, box or both'
 
@@ -56,7 +56,7 @@ class Segmenter:
                 multimask_output=multimask,
             )
         else:
-            raise ('Error')
+            raise ValueError('Invalid mode')
 
         return masks, scores, logits
 
@@ -139,6 +139,7 @@ if __name__ == '__main__':
     print(len(maskss))
     print(len(masks))
     # plt.imshow(frame)
+    # Исправить create_mask
     if len(maskss) < 1:
         maskss = []
         for mask in maskss:
@@ -162,16 +163,15 @@ if __name__ == '__main__':
     f = overlay_davis(frame, unique_mask)
     mask = visualize_unique_mask(unique_mask)
     f = cv2.cvtColor(f, cv2.COLOR_BGR2RGB)
-    
+
     img_rgb = cv2.cvtColor(unique_mask, cv2.COLOR_BGR2RGB)
     colors, inverse = np.unique(img_rgb.reshape(-1, 3), axis=0, return_inverse=True)
     mask_indices = inverse.reshape(img_rgb.shape[:2])
-    print("Классы:", np.unique(mask_indices))
-    
+    print('Классы:', np.unique(mask_indices))
+
     f = overlay_davis(frame, mask_indices)
     f = cv2.cvtColor(f, cv2.COLOR_BGR2RGB)
     mask = visualize_unique_mask(mask_indices)
-    cv2.imwrite('cats_rac_sam.png', mask)
     cv2.imshow('asd', mask)
     cv2.imshow('asdd', f)
     cv2.waitKey(0)
