@@ -35,7 +35,7 @@ class TrackerCore:
 
     @torch.no_grad()
     def track(
-        self, frame: np.ndarray, mask_segmet: np.ndarray = None, exhaustive=False
+        self, frame: np.ndarray, mask_segmet: np.ndarray | None = None, exhaustive=False
     ):
         if mask_segmet is not None:
             mask, labels = self.mapper.convert_mask(mask_segmet, exhaustive)

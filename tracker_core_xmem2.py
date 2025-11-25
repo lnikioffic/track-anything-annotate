@@ -36,7 +36,7 @@ class TrackerCore:
 
     @torch.no_grad()
     def track(
-        self, frame: np.ndarray, mask_segmet: np.ndarray = None, exhaustive=False
+        self, frame: np.ndarray, mask_segmet: np.ndarray | None = None, exhaustive=False
     ):
         if mask_segmet is not None:
             mask, labels = self.mapper.convert_mask(mask_segmet, exhaustive)
@@ -94,7 +94,7 @@ if __name__ == '__main__':
         }
         masks, scores, logits = seg.predict(prompts, mode)
         maskss.append(masks[np.argmax(scores)])
-    mask, unique_mask = merge_masks(maskss)
+    _, unique_mask = merge_masks(maskss)
 
     masks = []
     images = []
