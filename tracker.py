@@ -3,7 +3,7 @@ import numpy as np
 import psutil
 from tqdm import tqdm
 
-from tools.mask_merge import merge_masks
+from tools.converter import merge_masks, extract_color_regions
 from tracker_core_xmem2 import TrackerCore
 from tools.overlay_image import painter_borders
 from XMem2.inference.interact.interactive_utils import overlay_davis
@@ -33,7 +33,9 @@ class Tracker:
             result[np.argmax(scores)] for result, scores, logits in results
         ]
         mask, unique_mask = merge_masks(results_masks)
-        return unique_mask
+        mask_indices, colors = extract_color_regions(unique_mask)
+        print('Классы:', np.unique(mask_indices))
+        return mask_indices
 
     def tracking(
         self,

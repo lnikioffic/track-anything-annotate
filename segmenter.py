@@ -5,8 +5,8 @@ from sam2.build_sam import build_sam2
 from sam2.sam2_image_predictor import SAM2ImagePredictor
 
 from config import DEVICE
+from tools.converter import extract_color_regions, merge_masks
 from tools.mask_display import visualize_unique_mask
-from tools.mask_merge import create_mask, merge_masks
 from XMem2.inference.interact.interactive_utils import overlay_davis
 
 
@@ -132,47 +132,29 @@ if __name__ == '__main__':
             }
             masks, scores, logits = seg.predict(prompt, prompts['mode'], multimask=True)
             maskss.append(masks[np.argmax(scores)])
-        # masks, scores, logits = seg.predict(prompts, prompts['mode'], multimask=False)
     else:
         masks, scores, logits = seg.predict(prompts, prompts['mode'], multimask=False)
+        maskss = masks
+        print(len(masks))
 
     print(len(maskss))
-    print(len(masks))
-    # plt.imshow(frame)
-    # Исправить create_mask
+
     if len(maskss) < 1:
         maskss = []
         for mask in maskss:
             # mask = show_mask(mask.squeeze(0), plt.gca(), random_color=True)
-            mask = create_mask(mask.squeeze(0), random_color=True)
+            mask = mask.squeeze(0).astype(np.uint8)
             maskss.append(mask)
-    # plt.axis('off')
-    # plt.show()
-    # input_box = np.array([425, 600, 700, 875])
-    # input_point = np.array([[575, 750]])
-    # input_label = np.array([0])
-    # show_masks(
-    #     frame,
-    #     masks,
-    #     scores,
-    #     box_coords=input_box,
-    #     point_coords=input_point,
-    #     input_labels=input_label,
-    # )
-    mask, unique_mask = merge_masks(maskss)
-    f = overlay_davis(frame, unique_mask)
-    mask = visualize_unique_mask(unique_mask)
-    f = cv2.cvtColor(f, cv2.COLOR_BGR2RGB)
 
-    img_rgb = cv2.cvtColor(unique_mask, cv2.COLOR_BGR2RGB)
-    colors, inverse = np.unique(img_rgb.reshape(-1, 3), axis=0, return_inverse=True)
-    mask_indices = inverse.reshape(img_rgb.shape[:2])
+    mask, unique_mask = merge_masks(maskss)
+
+    mask_indices, colors = extract_color_regions(unique_mask)
     print('Классы:', np.unique(mask_indices))
 
     f = overlay_davis(frame, mask_indices)
     f = cv2.cvtColor(f, cv2.COLOR_BGR2RGB)
     mask = visualize_unique_mask(mask_indices)
-    cv2.imshow('asd', mask)
-    cv2.imshow('asdd', f)
+    cv2.imshow('mask', mask)
+    cv2.imshow('overlay', f)
     cv2.waitKey(0)
     cv2.destroyAllWindows()

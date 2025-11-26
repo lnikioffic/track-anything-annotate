@@ -2,24 +2,19 @@ import cv2
 import numpy as np
 
 from segmenter import Segmenter
+from tools.converter import extract_color_regions, merge_masks
 from tools.mask_display import visualize_unique_mask
-from tools.mask_merge import merge_masks
+from tools.types import PointPrompt, Prompt
 from XMem2.inference.interact.interactive_utils import overlay_davis
-from tools.types import Prompt, PointPrompt
 
 
 class SegmenterController:
     def __init__(self):
-        """
-        Инициализация контроллера для работы с Segmenter2.
-        :param device: Устройство для выполнения вычислений ('cuda' или 'cpu').
-        """
         self.segmenter = Segmenter()
         self.image_set = False
 
     def load_image(self, image: np.ndarray):
         """
-        Загружает изображение в Segmenter2.
         :param image: Изображение в формате NumPy массива (H, W, C).
         """
         if self.image_set:
@@ -33,9 +28,6 @@ class SegmenterController:
             print(f'Ошибка при загрузке изображения: {e}')
 
     def reset_image(self):
-        """
-        Сбрасывает текущее изображение в Segmenter2.
-        """
         if not self.image_set:
             print('Нет загруженного изображения для сброса.')
             return
@@ -50,7 +42,7 @@ class SegmenterController:
         self,
         point_coords: list[list[int] | list[list[int]]],
         point_labels: list[int | list[int]],
-    ) -> list[dict[str, np.ndarray]]:
+    ) -> list[tuple[dict[str, np.ndarray], bool]]:
         """
         Обрабатывает промпт для точек.
         :param point_coords: Координаты точек.
@@ -78,7 +70,7 @@ class SegmenterController:
 
     def _process_box_prompt(
         self, boxes: list[list[int]]
-    ) -> list[dict[str, np.ndarray]]:
+    ) -> list[tuple[dict[str, np.ndarray], bool]]:
         """
         Обрабатывает промпт для рамок.
         :param boxes: Рамки.
@@ -95,7 +87,7 @@ class SegmenterController:
         point_coords: list[list[int] | list[list[int]] | None],
         point_labels: list[int | list[int] | None],
         boxes: list[list[int]],
-    ) -> list[dict[str, np.ndarray]]:
+    ) -> list[tuple[dict[str, np.ndarray], bool]]:
         """
         Обрабатывает промпт для комбинированного режима.
         :param point_coords: Координаты точек.
@@ -150,7 +142,6 @@ class SegmenterController:
             raise ValueError("Режим должен быть 'point', 'box' или 'both'.")
 
         # TODO: добавить вариант без цикла
-
         for prompt, multimask in processed_prompts:
             try:
                 masks, scores, logits = self.segmenter.predict(
@@ -165,7 +156,6 @@ class SegmenterController:
 
 
 if __name__ == '__main__':
-    # Создаем контроллер
     controller = SegmenterController()
 
     path = 'video-test/truck.jpg'
@@ -180,8 +170,8 @@ if __name__ == '__main__':
     # Пример 1: Точки
     prompts: PointPrompt = {
         'mode': 'point',
-        'point_coords': [[[531, 230], [45, 321]], [226, 360], [194, 313]],
-        'point_labels': [[1, 1], 1, 1],
+        'point_coords': [[531, 230], [45, 321], [226, 360], [194, 313]],
+        'point_labels': [1, 1, 1, 1],
     }
 
     # prompts = {
@@ -226,13 +216,14 @@ if __name__ == '__main__':
     print(len(results))
     res = [result[np.argmax(scores)] for result, scores, logits in results]
     mask, unique_mask = merge_masks(res)
-    f = overlay_davis(frame, unique_mask)
-    mask = visualize_unique_mask(unique_mask)
+
+    mask_indices, colors = extract_color_regions(unique_mask)
+    f = overlay_davis(frame, mask_indices)
+    mask = visualize_unique_mask(mask_indices)
     f = cv2.cvtColor(f, cv2.COLOR_BGR2RGB)
-    cv2.imshow('asd', mask)
-    cv2.imshow('asd', f)
+    cv2.imshow('mask', mask)
+    cv2.imshow('overlay', f)
     cv2.waitKey(0)
     cv2.destroyAllWindows()
 
-    # Сбрасываем изображение
     controller.reset_image()

@@ -12,7 +12,7 @@ from XMem2.inference.interact.interactive_utils import overlay_davis
 from segmenter import Segmenter
 from tools.mask_display import visualize_wb_mask, mask_map
 from tools.contour_detector import getting_coordinates
-from tools.mask_merge import merge_masks
+from tools.converter import merge_masks, extract_color_regions
 
 
 class TrackerCore:
@@ -95,6 +95,8 @@ if __name__ == '__main__':
         masks, scores, logits = seg.predict(prompts, mode)
         maskss.append(masks[np.argmax(scores)])
     _, unique_mask = merge_masks(maskss)
+    mask_indices, colors = extract_color_regions(unique_mask)
+    print('Классы:', np.unique(mask_indices))
 
     masks = []
     images = []
@@ -114,7 +116,7 @@ if __name__ == '__main__':
             break
 
         if current_frame_index == 0:
-            mask = traker.track(frame_v, unique_mask)
+            mask = traker.track(frame_v, mask_indices)
             masks.append(mask)
             images.append(frame_v)
         else:

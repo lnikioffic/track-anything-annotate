@@ -15,10 +15,8 @@ def merge_masks(masks, method='max'):
 
     # Создаем пустое цветное изображение
     mask_colored = np.zeros((H, W, 3), dtype=np.uint8)
-
     # Создаем список случайных цветов для каждой маски
     colors = [tuple(np.random.randint(0, 255, size=3)) for _ in range(N)]
-
     # Создаем уникальную индексированную маску
     unique_mask = np.zeros((H, W), dtype=np.uint8)
 
@@ -39,16 +37,8 @@ def merge_masks(masks, method='max'):
     return mask_colored, unique_mask
 
 
-def create_mask(mask, random_color=False):
-    # Генерация цвета
-    # if random_color:
-    #     color = np.concatenate([np.random.random(3), np.array([0.6])], axis=0)
-    # else:
-    #     color = np.array(
-    #         [30 / 255, 144 / 255, 255 / 255, 0.6]
-    #     )  # Синий цвет с прозрачностью
-
-    # h, w = mask.shape[-2:]  # Получаем высоту и ширину маски
-    mask = mask.astype(np.uint8)  # Приводим маску к типу uint8
-
-    return mask  # Возвращаем маску в формате (H, W)
+def extract_color_regions(mask):
+    img_rgb = cv2.cvtColor(mask, cv2.COLOR_BGR2RGB)
+    colors, inverse = np.unique(img_rgb.reshape(-1, 3), axis=0, return_inverse=True)
+    mask_indices = inverse.reshape(img_rgb.shape[:2])
+    return mask_indices, colors
