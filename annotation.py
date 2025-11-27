@@ -1,10 +1,14 @@
+import argparse
 from typing import Any
+
 import cv2
 import numpy as np
+
+from interactive_video import InteractVideo
 from sam_controller import SegmenterController
 from tools.data_exporter import get_type_save_annotation
+from tools.types import Prompt
 from tracker import Tracker
-from interactive_video import InteractVideo
 from tracker_core_xmem2 import TrackerCore
 
 
@@ -39,9 +43,9 @@ def process_keypoint(
     if not coords:
         return
     try:
-        frame = cv2.imread(frames_path[frame_idx])
+        frame = np.array(cv2.imread(frames_path[frame_idx]))
         tracker.sam_controller.load_image(frame)
-        prompts = {
+        prompts: Prompt = {
             'mode': 'point',
             'point_coords': coords,
             'point_labels': [1] * len(coords),
@@ -56,29 +60,10 @@ def process_keypoint(
             }
         )
     except Exception as e:
-        print(f"Ошибка при обработке ключевой точки (frame {frame_idx}): {e}")
+        print(f'Ошибка при обработке ключевой точки (frame {frame_idx}): {e}')
 
 
-def process_single_keypoint(
-    tracker: Tracker, results: dict[str, Any], annotations: list[dict[str, Any]]
-) -> None:
-    try:
-        current_frame = list(results['keypoints'].keys())[0]
-        next_frame = len(results['frames_path'])
-        current_coords = results['keypoints'][current_frame]
-        process_keypoint(
-            tracker,
-            current_frame,
-            next_frame,
-            current_coords,
-            results['frames_path'],
-            annotations,
-        )
-    except Exception as e:
-        print(f"Ошибка в process_single_keypoint: {e}")
-
-
-def process_multiple_keypoints(
+def process_keypoints(
     tracker: Tracker, results: dict[str, Any], annotations: list[dict[str, Any]]
 ) -> None:
     try:
@@ -86,7 +71,6 @@ def process_multiple_keypoints(
         for i in range(len(keypoints_keys) - 1):
             current_frame = keypoints_keys[i]
             next_frame = keypoints_keys[i + 1]
-            print(next_frame)
             current_coords = results['keypoints'][current_frame]
             process_keypoint(
                 tracker,
@@ -97,7 +81,7 @@ def process_multiple_keypoints(
                 annotations,
             )
     except Exception as e:
-        print(f"Ошибка в process_multiple_keypoints: {e}")
+        print(f'Ошибка в process_keypoints: {e}')
 
 
 def get_masks_and_images(
@@ -105,12 +89,12 @@ def get_masks_and_images(
 ) -> tuple[list[np.ndarray], list[np.ndarray]]:
     masks: list[np.ndarray] = []
     images_ann: list[np.ndarray] = []
-    for ann in annotations:
-        current_frame, next_frame = ann['gap']
-        if ann['mask'] is not None:
+    for annotation in annotations:
+        current_frame, next_frame = annotation['gap']
+        if annotation['mask'] is not None:
             frame_sources = results['frames_path'][int(current_frame) : int(next_frame)]
-            images = [cv2.imread(f) for f in frame_sources]
-            mask = tracker.tracking(images, ann['mask'])
+            images = [np.array(cv2.imread(f)) for f in frame_sources]
+            mask = tracker.tracking(images, annotation['mask'])
             tracker.tracker.clear_memory()
             masks.extend(mask)
             images_ann.extend(images)
@@ -128,14 +112,7 @@ def main(video_path: str, names_class: list[str]):
     tracker = Tracker(segmenter_controller, tracker_core)
 
     annotations: list[dict] = []
-    print(len(results['keypoints']))
-    if len(results['keypoints']) > 1:
-        keypoints_keys = list(results['keypoints'].keys())
-        print("mult")
-        print(f"{keypoints_keys[0]} {keypoints_keys[1]}")
-        process_multiple_keypoints(tracker, results, annotations)
-    else:
-        process_single_keypoint(tracker, results, annotations)
+    process_keypoints(tracker, results, annotations)
 
     print(f'{len(annotations)} Колличество сегментов')
 
@@ -143,7 +120,15 @@ def main(video_path: str, names_class: list[str]):
     create_dataset(images_ann, masks, names_class, 'yolo')
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description='Annotation tool')
+    parser.add_argument('--video-path', type=str, help='Path to the video file', default='video-test/video.mp4')
+    parser.add_argument('--name-class', type=str,  help='Names of classes', default='thing') # nargs='+',
+    return parser.parse_args()
+
+
 if __name__ == '__main__':
-    path = 'video-test/video.mp4'
-    name = ['tomato']
+    args = parse_args()
+    path = args.video_path
+    name = args.name_class
     main(path, name)

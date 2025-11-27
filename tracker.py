@@ -9,6 +9,7 @@ from tools.overlay_image import painter_borders
 from XMem2.inference.interact.interactive_utils import overlay_davis
 from sam_controller import SegmenterController
 from interactive_video import InteractVideo
+from tools.types import Prompt
 
 
 class Tracker:
@@ -19,15 +20,7 @@ class Tracker:
         self.tracker = tracker_core
         print(f'used {TrackerCore.name_version}')
 
-    def select_object(self, prompts: dict) -> np.ndarray:
-        # maskss = []
-        # for point in points:
-        #     prompts = {
-        #         'point_coords': np.array([point]),
-        #         'point_labels': np.array([1]),
-        #     }
-        #     masks, scores, logits = self.segmenter.predict(prompts, 'point')
-        #     maskss.append(masks[np.argmax(scores)])
+    def select_object(self, prompts: Prompt) -> np.ndarray:
         results = self.sam_controller.predict_from_prompts(prompts)
         results_masks = [
             result[np.argmax(scores)] for result, scores, logits in results
@@ -105,7 +98,7 @@ if __name__ == '__main__':
     frame_sources = results['frames_path']
     frames = [cv2.imread(f) for f in frame_sources]
     
-    prompts = {
+    prompts: Prompt = {
         'mode': 'point',
         'point_coords': [[531, 230], [45, 321], [226, 360], [194, 313]],
         'point_labels': [1, 1, 1, 1],
@@ -128,27 +121,6 @@ if __name__ == '__main__':
 
     # result = []
     # print(len(results['keypoints']))
-    # if len(results['keypoints']) == 1:
-    #     current_frame = list(results['keypoints'].keys())[0]
-    #     next_frame = len(results["frames"])
-    #     current_coords = results['keypoints'][current_frame]
-
-    #     if current_coords:
-    #         tracker.sam_controller.load_image(results['frames'][int(current_frame)])
-    #         prompts = {
-    #             'mode': 'point',
-    #             'point_coords': current_coords,
-    #             'point_labels': [1] * len(current_coords),
-    #         }
-    #         mask = tracker.select_object(prompts)
-    #         tracker.sam_controller.reset_image()
-    #         result.append(
-    #             {
-    #                 'gap': [current_frame, next_frame],
-    #                 'frame': current_frame,
-    #                 'mask': mask,
-    #             }
-    #         )
 
     # for i in range(len(results['keypoints']) - 1):
     #     current_frame = list(results['keypoints'].keys())[i]

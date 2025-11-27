@@ -2,6 +2,7 @@ import tempfile
 from pathlib import Path
 
 import cv2
+import numpy as np
 import progressbar
 
 
@@ -16,7 +17,7 @@ class InteractVideo:
             int, list[tuple[int, int]]
         ] = {}  # {frame_index: [(x1,y1), (x2,y2), ...]}
         self.keyframe_interval = keyframe_interval
-        self.current_frame_idx = 0  # Текущий индекс кадра
+        self.current_frame_idx = 0 
         self.history: list[int] = []  # Для отслеживания пропущенных кадров
         self.max_points = max_points
         self.fps = 0.0
@@ -81,7 +82,7 @@ class InteractVideo:
         saved_flag = False
 
         while 0 <= self.current_frame_idx < len(self.frames_path):
-            frame = cv2.imread(self.frames_path[self.current_frame_idx])
+            frame = np.array(cv2.imread(self.frames_path[self.current_frame_idx]))
             is_keyframe = self.current_frame_idx % self.keyframe_interval == 0
 
             if is_keyframe:
@@ -93,7 +94,6 @@ class InteractVideo:
                 while True:
                     key = cv2.waitKey(100)
 
-                    # Подтверждение выбора
                     if key == ord('s'):  # Enter
                         self.keypoints[self.current_frame_idx] = (
                             self.current_points.copy()
@@ -112,11 +112,9 @@ class InteractVideo:
                         self.history.append(self.current_frame_idx)
                         self.current_frame_idx += 1
                         break
-                    # Назад
                     elif key == ord('a') and self.history:
                         self.current_frame_idx = self.history.pop()
                         break
-                    # Выход
                     elif key in (ord('q'), 27):
                         cv2.destroyAllWindows()
                         if saved_flag:
