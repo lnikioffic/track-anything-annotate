@@ -7,7 +7,7 @@ import numpy as np
 from interactive_video import InteractVideo
 from sam_controller import SegmenterController
 from tools.data_exporter import get_type_save_annotation
-from tools.types import Prompt
+from tools.types import AnnotationInfo, Prompt
 from tracker import Tracker
 from tracker_core_xmem2 import TrackerCore
 
@@ -64,7 +64,7 @@ def process_keypoint(
 
 
 def process_keypoints(
-    tracker: Tracker, results: dict[str, Any], annotations: list[dict[str, Any]]
+    tracker: Tracker, results: AnnotationInfo, annotations: list[dict[str, Any]]
 ) -> None:
     try:
         keypoints_keys = list(results['keypoints'].keys())
@@ -85,7 +85,7 @@ def process_keypoints(
 
 
 def get_masks_and_images(
-    tracker: Tracker, annotations: list[dict], results: dict
+    tracker: Tracker, annotations: list[dict], results: AnnotationInfo
 ) -> tuple[list[np.ndarray], list[np.ndarray]]:
     masks: list[np.ndarray] = []
     images_ann: list[np.ndarray] = []
@@ -122,13 +122,20 @@ def main(video_path: str, names_class: list[str]):
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Annotation tool')
-    parser.add_argument('--video-path', type=str, help='Path to the video file', default='video-test/video.mp4')
-    parser.add_argument('--name-class', type=str,  help='Names of classes', default='thing') # nargs='+',
+    parser.add_argument(
+        '--video-path',
+        type=str,
+        help='Path to the video file',
+        default='video-test/video.mp4',
+    )
+    parser.add_argument(
+        '--names-class', type=str, nargs='+', help='Names of classes', default=['thing']
+    )
     return parser.parse_args()
 
 
 if __name__ == '__main__':
     args = parse_args()
     path = args.video_path
-    name = args.name_class
+    name = args.names_class
     main(path, name)

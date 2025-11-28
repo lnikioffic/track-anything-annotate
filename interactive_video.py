@@ -5,6 +5,8 @@ import cv2
 import numpy as np
 import progressbar
 
+from tools.types import AnnotationInfo
+
 
 class InteractVideo:
     def __init__(
@@ -17,7 +19,7 @@ class InteractVideo:
             int, list[tuple[int, int]]
         ] = {}  # {frame_index: [(x1,y1), (x2,y2), ...]}
         self.keyframe_interval = keyframe_interval
-        self.current_frame_idx = 0 
+        self.current_frame_idx = 0
         self.history: list[int] = []  # Для отслеживания пропущенных кадров
         self.max_points = max_points
         self.fps = 0.0
@@ -182,7 +184,7 @@ class InteractVideo:
         cv2.circle(self.current_frame, (x, y), 5, (0, 0, 255), -1)
         cv2.imshow('Frame', self.current_frame)
 
-    def get_results(self) -> dict[str, list[str] | dict[int, list[tuple[int, int]]]]:
+    def get_results(self) -> AnnotationInfo:
         return {
             'frames_path': self.frames_path,
             'keypoints': self.keypoints,

@@ -38,7 +38,7 @@ gradio demo.py
 ### Dataset Creation
 
 ```bash
-uv run annotation.py --video-path path_to_video --name-class name_class
+uv run annotation.py --video-path path_to_video --names-class name_class
 ```
 
 ---

@@ -21,3 +21,8 @@ class BothPrompt(TypedDict):
 
 
 Prompt = PointPrompt | BoxPrompt | BothPrompt
+
+
+class AnnotationInfo(TypedDict):
+    frames_path: list[str]
+    keypoints: dict[int, list[tuple[int, int]]]
