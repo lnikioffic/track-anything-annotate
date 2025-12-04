@@ -29,7 +29,7 @@ def create_dataset(
 
     saver = get_type_save_annotation(send_images, send_masks, names_class, type_save)
     saver.create_dataset()
-    print(saver.create_archive())
+    print(f'Saved archive {saver.create_archive()}')
 
 
 def process_keypoint(
@@ -60,7 +60,7 @@ def process_keypoint(
             }
         )
     except Exception as e:
-        print(f'Ошибка при обработке ключевой точки (frame {frame_idx}): {e}')
+        print(f'Error processing keypoint (frame {frame_idx}): {e}')
 
 
 def process_keypoints(
@@ -81,7 +81,7 @@ def process_keypoints(
                 annotations,
             )
     except Exception as e:
-        print(f'Ошибка в process_keypoints: {e}')
+        print(f'Error process_keypoints: {e}')
 
 
 def get_masks_and_images(
@@ -101,7 +101,7 @@ def get_masks_and_images(
     return images_ann, masks
 
 
-def main(video_path: str, names_class: list[str]):
+def main(video_path: str, names_class: list[str], type_save: str):
     video = InteractVideo(video_path)
     video.extract_frames()
     video.collect_keypoints()
@@ -114,10 +114,10 @@ def main(video_path: str, names_class: list[str]):
     annotations: list[dict] = []
     process_keypoints(tracker, results, annotations)
 
-    print(f'{len(annotations)} Колличество сегментов')
+    print(f'Count of segments: {len(annotations)}')
 
     images_ann, masks = get_masks_and_images(tracker, annotations, results)
-    create_dataset(images_ann, masks, names_class, 'yolo')
+    create_dataset(images_ann, masks, names_class, type_save)
 
 
 def parse_args():
@@ -131,6 +131,7 @@ def parse_args():
     parser.add_argument(
         '--names-class', type=str, nargs='+', help='Names of classes', default=['thing']
     )
+    parser.add_argument('--type-save', type=str, help='Type of saving', default='yolo')
     return parser.parse_args()
 
 
@@ -138,4 +139,5 @@ if __name__ == '__main__':
     args = parse_args()
     path = args.video_path
     name = args.names_class
-    main(path, name)
+    type_save = args.type_save
+    main(path, name, type_save)

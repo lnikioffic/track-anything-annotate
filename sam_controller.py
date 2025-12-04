@@ -18,25 +18,25 @@ class SegmenterController:
         :param image: Изображение в формате NumPy массива (H, W, C).
         """
         if self.image_set:
-            print('Изображение уже загружено. Сбросьте его перед загрузкой нового.')
+            print('Image already loaded. Reset it before loading a new one.')
             return
         try:
             self.segmenter.set_image(image)
             self.image_set = True
-            print('Изображение успешно загружено.')
+            print('Image successfully loaded.')
         except Exception as e:
-            print(f'Ошибка при загрузке изображения: {e}')
+            print(f'Error loading image: {e}')
 
     def reset_image(self):
         if not self.image_set:
-            print('Нет загруженного изображения для сброса.')
+            print('No image loaded to reset.')
             return
         try:
             self.segmenter.reset_image()
             self.image_set = False
-            print('Изображение успешно сброшено.')
+            print('Image successfully reset.')
         except Exception as e:
-            print(f'Ошибка при сбросе изображения: {e}')
+            print(f'Error resetting image: {e}')
 
     def _process_point_prompt(
         self,
@@ -115,7 +115,7 @@ class SegmenterController:
         :return: Список кортежей (маски, оценки, логиты).
         """
         if not self.image_set:
-            raise RuntimeError('Изображение не загружено. Сначала вызовите load_image.')
+            raise RuntimeError('Image not loaded. Call load_image first.')
 
         mode = prompts.get('mode')
         results = []
@@ -139,7 +139,7 @@ class SegmenterController:
                 point_coords, point_labels, boxes
             )
         else:
-            raise ValueError("Режим должен быть 'point', 'box' или 'both'.")
+            raise ValueError("Mode must be 'point', 'box' or 'both'.")
 
         # TODO: добавить вариант без цикла
         for prompt, multimask in processed_prompts:
@@ -149,7 +149,7 @@ class SegmenterController:
                 )
                 results.append((masks, scores, logits))
             except Exception as e:
-                print(f'Ошибка при выполнении предсказания: {e}')
+                print(f'Error occurred during prediction: {e}')
                 raise
 
         return results

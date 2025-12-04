@@ -20,7 +20,7 @@ class InteractVideo:
         ] = {}  # {frame_index: [(x1,y1), (x2,y2), ...]}
         self.keyframe_interval = keyframe_interval
         self.current_frame_idx = 0
-        self.history: list[int] = []  # Для отслеживания пропущенных кадров
+        self.history: list[int] = []  # For tracking skipped frames
         self.max_points = max_points
         self.fps = 0.0
         self.count_frames = 0
@@ -160,11 +160,11 @@ class InteractVideo:
             1,
         )
 
-        # Сетка
+        # Grid
         cv2.line(self.current_frame, (w // 2, 0), (w // 2, h), (0, 255, 0), 1)
         cv2.line(self.current_frame, (0, h // 2), (w, h // 2), (0, 255, 0), 1)
 
-        # Точки
+        # Points
         for x, y in self.current_points:
             cv2.circle(self.current_frame, (x, y), 5, (0, 0, 255), -1)
 
@@ -176,11 +176,11 @@ class InteractVideo:
         if self.current_frame_idx % self.keyframe_interval != 0:
             return
         if len(self.current_points) >= self.max_points:
-            print('Достигнут лимит точек')
+            print('Point limit')
             return
-        print(f'Кадр {self.current_frame_idx}')
+        print(f'Frame {self.current_frame_idx}')
         self.current_points.append((x, y))
-        print(f'Точка добавлена: ({x}, {y})')
+        print(f'Point added: ({x}, {y})')
         cv2.circle(self.current_frame, (x, y), 5, (0, 0, 255), -1)
         cv2.imshow('Frame', self.current_frame)
 
