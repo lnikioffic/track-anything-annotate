@@ -9,6 +9,9 @@
   </a>
 </div>
 
+***Track Anything Annotate*** is a flexible tool for tracking, segmentation, and annotation of videos. It allows creating datasets from videos in YOLO and COCO formats. It is based on Segment Anything 2 and allows specifying any objects for tracking and segmentation.
+
+Read this in other languages: [English](README.md) | [Русский](README.ru.md)
 ## Quick Start
 
 ### 🛠️ Installation via `uv`
@@ -88,6 +91,14 @@ python demo.py
 # Dataset Creation
 python annotation.py
 ```
+
+## 🗺️ Roadmap and Improvements
+
+*   [x] Tracking single class export in YOLO.
+*   [x] **New export formats:** Adding support for COCO JSON.
+*   [ ] **New export formats:** Adding support for Pascal VOC XML.      
+*   [ ] **Multi-class annotation:** Ability to track multiple different classes.
+*   [ ] **Image annotation:** Ability to collect and annotate your own dataset based on images.
 
 ## 📚 Citation 
 
