@@ -1,0 +1,21 @@
+[
+    {
+        "class_name": "raccon",
+        "prompt": {
+            "mode": "box",
+            "boxes": [[476, 166, 578, 320]]
+        }
+    },
+    {
+        "class_name": "cat",
+        "prompt": {
+            "mode": "point",
+            "point_coords": [
+                [45, 321],
+                [226, 360],
+                [194, 313]
+            ],
+            "point_labels": [1, 1, 1]
+        }
+    }
+]

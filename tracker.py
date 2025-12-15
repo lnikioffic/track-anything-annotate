@@ -21,7 +21,8 @@ class Tracker:
         print(f'used {TrackerCore.name_version}')
 
     def select_object(self, prompts: Prompt) -> np.ndarray:
-        results = self.sam_controller.predict_from_prompts(prompts)
+        mode, processed_prompts = self.sam_controller.create_prompts(prompts)
+        results = self.sam_controller.predict_from_prompts(mode, processed_prompts)
         results_masks = [
             result[np.argmax(scores)] for result, scores, logits in results
         ]
@@ -55,32 +56,32 @@ class Tracker:
                 masks.append(mask)
         return masks
 
-    def tracking_cut(
-        self,
-        frames: list[np.ndarray],
-        templates_masks: dict[str, np.ndarray],
-        exhaustive: bool = False,
-    ):
-        masks = []
-        for i in tqdm(range(len(frames)), desc='Tracking_cut'):
-            current_memory_usage = psutil.virtual_memory().percent
-            if current_memory_usage > 90:
-                break
+    # def tracking_cut(
+    #     self,
+    #     frames: list[np.ndarray],
+    #     templates_masks: dict[str, np.ndarray],
+    #     exhaustive: bool = False,
+    # ):
+    #     masks = []
+    #     for i in tqdm(range(len(frames)), desc='Tracking_cut'):
+    #         current_memory_usage = psutil.virtual_memory().percent
+    #         if current_memory_usage > 90:
+    #             break
 
-            if str(i) in templates_masks:
-                template_mask = templates_masks[str(i)]
+    #         if str(i) in templates_masks:
+    #             template_mask = templates_masks[str(i)]
 
-            if i == 0 and str(i) in templates_masks:
-                mask = self.tracker.track(frames[i], template_mask, exhaustive)
-                masks.append(mask)
-            else:
-                mask = self.tracker.track(frames[i])
-                masks.append(mask)
+    #         if i == 0 and str(i) in templates_masks:
+    #             mask = self.tracker.track(frames[i], template_mask, exhaustive)
+    #             masks.append(mask)
+    #         else:
+    #             mask = self.tracker.track(frames[i])
+    #             masks.append(mask)
 
-            if len(templates_masks) > 1:
-                exhaustive = True
+    #         if len(templates_masks) > 1:
+    #             exhaustive = True
 
-        return masks
+    #     return masks
 
 
 if __name__ == '__main__':

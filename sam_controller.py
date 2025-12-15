@@ -106,9 +106,7 @@ class SegmenterController:
                 prompts.append((prompt, True))  # multimask=True, если точек нет
         return prompts
 
-    def predict_from_prompts(
-        self, prompts: Prompt
-    ) -> list[tuple[np.ndarray, np.ndarray, np.ndarray]]:
+    def create_prompts(self, prompts: Prompt):
         """
         Выполняет предсказание на основе заданного промпта.
         :param prompts: Словарь с данными для предсказания.
@@ -118,7 +116,6 @@ class SegmenterController:
             raise RuntimeError('Image not loaded. Call load_image first.')
 
         mode = prompts.get('mode')
-        results = []
 
         if mode == 'point':
             point_coords = prompts.get('point_coords', [])
@@ -141,7 +138,13 @@ class SegmenterController:
         else:
             raise ValueError("Mode must be 'point', 'box' or 'both'.")
 
-        # TODO: добавить вариант без цикла
+        return mode, processed_prompts
+
+    # TODO: добавить вариант без цикла
+    def predict_from_prompts(
+        self, mode, processed_prompts
+    ) -> list[tuple[np.ndarray, np.ndarray, np.ndarray]]:
+        results = []
         for prompt, multimask in processed_prompts:
             try:
                 masks, scores, logits = self.segmenter.predict(
@@ -184,11 +187,13 @@ if __name__ == '__main__':
         prompts: PointPrompt = {
             'mode': 'point',
             'point_coords': [[531, 230], [45, 321], [226, 360], [194, 313]],
-            'point_labels': [1, 0, 1, 1],
+            'point_labels': [1, 1, 1, 1],
         }
-        return controller.predict_from_prompts(prompts)
+        mode, processed_prompts = controller.create_prompts(prompts)
+        return controller.predict_from_prompts(mode, processed_prompts)
 
-    results = controller.predict_from_prompts(prompts)
+    mode, processed_prompts = controller.create_prompts(prompts)
+    results = controller.predict_from_prompts(mode, processed_prompts)
 
     execution_time_ms = timeit.timeit(run_segmentation, number=1) * 1000
     print(f'Время выполнения: {execution_time_ms:.2f} мс')
@@ -202,7 +207,8 @@ if __name__ == '__main__':
     #         [155, 283, 225, 339],
     #     ],
     # }
-    # results = controller.predict_from_prompts(prompts)
+    # mode, processed_prompts = controller.create_prompts(prompts)
+    # results = controller.predict_from_prompts(mode, processed_prompts)
 
     # Пример 3: Комбинированный режим
     # prompts = {

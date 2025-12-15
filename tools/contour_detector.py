@@ -53,6 +53,18 @@ def get_filtered_bboxes(img, min_area_ratio):
         # Удалите очень мелкие дефекты.
         if cnt_area > min_area_ratio * im_area:
             bboxes.append((x, y, x + w, y + h))
+            
+    if len(bboxes) > 0:
+        min_x = min([bbox[0] for bbox in bboxes])
+        min_y = min([bbox[1] for bbox in bboxes])
+        max_x = max([bbox[2] for bbox in bboxes])
+        max_y = max([bbox[3] for bbox in bboxes])
+
+        combined_width = max_x - min_x
+        combined_height = max_y - min_y
+
+        return [(min_x, min_y, min_x + combined_width, min_y + combined_height)]
+        
     return bboxes
 
 

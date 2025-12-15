@@ -75,7 +75,9 @@ if __name__ == '__main__':
 
     bboxes = [(476, 166, 102, 154), (8, 252, 91, 149), (106, 335, 211, 90)]
     points = [[531, 230], [45, 321], [226, 360], [194, 313]]
-
+    
+    # первый енот [(487, 176, 574, 318)] второй самый левый кот [(11, 267, 111, 415)] третий передний кот [(98, 300, 321, 443)]
+    # четвертый задний кот [(158, 292, 224, 343)]
     mode = 'point'
     prompts = {
         'point_coords': np.array([[531, 230], [45, 321], [226, 360], [194, 313]]),
@@ -96,6 +98,20 @@ if __name__ == '__main__':
         maskss.append(masks[np.argmax(scores)])
     _, unique_mask = merge_masks(maskss)
     mask_indices, colors = extract_color_regions(unique_mask)
+    
+    from tools.mask_display import mask_map
+    from tools.contour_detector import get_filtered_bboxes
+    
+    def check_coords(mask):
+        coords = []
+        for obj in mask_map(mask):
+            m = cv2.cvtColor(obj, cv2.COLOR_BGR2GRAY)
+            coords.extend(get_filtered_bboxes(m, min_area_ratio=0.001))
+        return coords
+    
+    coords = check_coords(unique_mask)
+    
+    print(coords)
     print('Классы:', np.unique(mask_indices))
 
     masks = []
@@ -126,6 +142,16 @@ if __name__ == '__main__':
 
         current_frame_index += 1
     video.release()
+    
+    coords = check_coords(masks[1])
+    print(coords)
+    
+    coords = check_coords(masks[10])
+    print(coords)
+    
+    coords = check_coords(masks[40])
+    print(coords)
+    
     im3 = visualize_wb_mask(masks[200])
     ima = images[200].copy()
     for m in mask_map(masks[200]):
