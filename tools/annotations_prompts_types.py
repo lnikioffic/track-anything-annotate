@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import TypedDict
 
 
@@ -22,11 +23,19 @@ class BothPrompt(TypedDict):
 Prompt = PointPrompt | BoxPrompt | BothPrompt
 
 
+@dataclass
+class AnnotationInfo:
+    class_name: str
+    prompt: Prompt
+    count_objects: int = 0
+    order: int = 0
+
+
 class AnnotationItem(TypedDict):
     class_name: str
     prompt: Prompt
 
 
-class AnnotationInfo(TypedDict):
+class AnnotationVideoInfo(TypedDict):
     frames_path: list[str]
     keypoints: dict[int, list[tuple[int, int]]]

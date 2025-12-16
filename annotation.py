@@ -6,30 +6,10 @@ import numpy as np
 
 from interactive_video import InteractVideo
 from sam_controller import SegmenterController
-from tools.data_exporter import get_type_save_annotation
-from tools.types import AnnotationInfo, Prompt
+from tools.annotations_prompts_types import AnnotationInfo, AnnotationVideoInfo, Prompt
+from tools.data_exporter import create_dataset
 from tracker import Tracker
 from tracker_core_xmem2 import TrackerCore
-
-
-def create_dataset(
-    images: list[np.ndarray],
-    masks: list[np.ndarray],
-    names_class: list[str],
-    type_save: str = 'yolo',
-):
-    assert len(masks) == len(images)
-
-    send_images = []
-    send_masks = []
-    for i in range(len(masks)):
-        if i % 2 == 0:
-            send_images.append(images[i])
-            send_masks.append(masks[i])
-
-    saver = get_type_save_annotation(send_images, send_masks, names_class, type_save)
-    saver.create_dataset()
-    print(f'Saved archive {saver.create_archive()}')
 
 
 def process_keypoint(
@@ -38,8 +18,7 @@ def process_keypoint(
     next_frame_idx: int,
     coords: list[Any],
     frames_path: list[str],
-    annotations: list[dict[str, Any]],
-) -> None:
+):
     if not coords:
         return
     try:
@@ -52,40 +31,48 @@ def process_keypoint(
         }
         mask = tracker.select_object(prompts)
         tracker.sam_controller.reset_image()
-        annotations.append(
-            {
-                'gap': [frame_idx, next_frame_idx],
-                'frame': frame_idx,
-                'mask': mask,
-            }
-        )
+        annotations = {
+            'gap': [frame_idx, next_frame_idx],
+            'frame': frame_idx,
+            'mask': mask,
+            'prompts': prompts,
+        }
+        return annotations
     except Exception as e:
         print(f'Error processing keypoint (frame {frame_idx}): {e}')
 
 
-def process_keypoints(
-    tracker: Tracker, results: AnnotationInfo, annotations: list[dict[str, Any]]
-) -> None:
+def process_keypoints(tracker: Tracker, results: AnnotationVideoInfo):
     try:
         keypoints_keys = list(results['keypoints'].keys())
+        annotations = []
+        infos = []
         for i in range(len(keypoints_keys) - 1):
             current_frame = keypoints_keys[i]
             next_frame = keypoints_keys[i + 1]
             current_coords = results['keypoints'][current_frame]
-            process_keypoint(
+            ann = process_keypoint(
                 tracker,
                 current_frame,
                 next_frame,
                 current_coords,
                 results['frames_path'],
-                annotations,
             )
+            info = AnnotationInfo(
+                class_name='class_name',
+                prompt=ann['prompts'],
+                count_objects=len(current_coords),
+                order=0,
+            )
+            annotations.append(ann)
+            infos.append(info)
+        return annotations, infos
     except Exception as e:
         print(f'Error process_keypoints: {e}')
 
 
 def get_masks_and_images(
-    tracker: Tracker, annotations: list[dict], results: AnnotationInfo
+    tracker: Tracker, annotations: list[dict], results: AnnotationVideoInfo
 ) -> tuple[list[np.ndarray], list[np.ndarray]]:
     masks: list[np.ndarray] = []
     images_ann: list[np.ndarray] = []
@@ -103,7 +90,7 @@ def get_masks_and_images(
 
 def main(video_path: str, names_class: list[str], type_save: str):
     video = InteractVideo(video_path)
-    video.extract_frames()
+    video.extract_frames(100)
     video.collect_keypoints()
     results = video.get_results()
 
@@ -112,12 +99,26 @@ def main(video_path: str, names_class: list[str], type_save: str):
     tracker = Tracker(segmenter_controller, tracker_core)
 
     annotations: list[dict] = []
-    process_keypoints(tracker, results, annotations)
-
+    annotations_info = []
+    ann, info = process_keypoints(tracker, results)
+    annotations.extend(ann)
+    annotations_info.extend(info)
     print(f'Count of segments: {len(annotations)}')
 
     images_ann, masks = get_masks_and_images(tracker, annotations, results)
-    create_dataset(images_ann, masks, names_class, type_save)
+    i = 0
+    id_map = {}
+    for ann in annotations_info:
+        key = list(ann.prompt.keys())[1]
+        for p in ann.prompt[f'{key}']:
+            mask_id = i + 1
+            i += 1
+            id_map[mask_id] = {
+                'class': ann.class_name,
+                'order': ann.order,
+                'mask_slice_index': i,
+            }
+    create_dataset(images_ann, masks, names_class, id_map, type_save)
 
 
 def parse_args():

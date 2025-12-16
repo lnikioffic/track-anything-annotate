@@ -4,7 +4,7 @@ from pathlib import Path
 
 
 def draw(images_path, labels_path):
-    pa = Path.cwd() / 'video-test' / 'dt-tomato'
+    pa = Path.cwd() / 'video-test' / 'dt-racconcat'
     pal = Path(pa / labels_path)
     dir_list = sorted(pal.glob('*'))
     for each in dir_list:
@@ -28,7 +28,7 @@ def draw_labels_on_image(path, images_path, labels_path, file_name) -> None:
 
             font = ImageFont.truetype("arial.ttf", 15)
             draw = ImageDraw.Draw(image)
-            # draw.text((x + 50, y + 50), class_id, font=font, fill=(255, 0, 0))
+            draw.text((x + 50, y + 50), class_id, font=font, fill=(255, 0, 0))
             draw.rectangle(
                 (
                     (x - width_factor // 2),
@@ -44,7 +44,7 @@ def draw_labels_on_image(path, images_path, labels_path, file_name) -> None:
 
 
 if __name__ == '__main__':
-    draw('images', 'lables')
+    draw('images', 'labels')
 
     # # Укажите путь к папке, которую нужно архивировать
     # folder_path = Path.cwd() / 'data' / 'Helmetxy'

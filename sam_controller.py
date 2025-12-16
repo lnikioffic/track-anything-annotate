@@ -4,7 +4,7 @@ import numpy as np
 from segmenter import Segmenter
 from tools.converter import extract_color_regions, merge_masks
 from tools.mask_display import visualize_unique_mask
-from tools.types import PointPrompt, Prompt
+from tools.annotations_prompts_types import PointPrompt, Prompt
 from XMem2.inference.interact.interactive_utils import overlay_davis
 
 

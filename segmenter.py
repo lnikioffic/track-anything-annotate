@@ -74,8 +74,8 @@ if __name__ == '__main__':
 
     prompts = {
         'mode': 'point',
-        'point_coords': [[531, 230], [45, 321], [226, 360], [194, 313]],
-        'point_labels': [1, 1, 1, 1],
+        'point_coords': [[531, 230], [45, 321], [[226, 360], [194, 313]]],
+        'point_labels': [1, 1, [1, 0]],
     }
 
     # prompts = {

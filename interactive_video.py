@@ -5,7 +5,7 @@ import cv2
 import numpy as np
 import progressbar
 
-from tools.types import AnnotationInfo
+from tools.annotations_prompts_types import AnnotationVideoInfo
 
 
 class InteractVideo:
@@ -75,6 +75,9 @@ class InteractVideo:
             bar.update(frame_index)
         bar.finish()
         cap.release()
+
+    def get_frames_path(self):
+        return self.frames_path
 
     def collect_keypoints(self):
         """Собирает ключевые точки с поддержкой навигации"""
@@ -184,7 +187,7 @@ class InteractVideo:
         cv2.circle(self.current_frame, (x, y), 5, (0, 0, 255), -1)
         cv2.imshow('Frame', self.current_frame)
 
-    def get_results(self) -> AnnotationInfo:
+    def get_results(self) -> AnnotationVideoInfo:
         return {
             'frames_path': self.frames_path,
             'keypoints': self.keypoints,

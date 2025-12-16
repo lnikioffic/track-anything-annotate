@@ -9,7 +9,7 @@ from tools.overlay_image import painter_borders
 from XMem2.inference.interact.interactive_utils import overlay_davis
 from sam_controller import SegmenterController
 from interactive_video import InteractVideo
-from tools.types import Prompt
+from tools.annotations_prompts_types import Prompt
 
 
 class Tracker:
