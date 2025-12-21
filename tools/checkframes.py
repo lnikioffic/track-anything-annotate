@@ -1,10 +1,11 @@
-from PIL import Image, ImageDraw, ImageFont
 import os
 from pathlib import Path
 
+from PIL import Image, ImageDraw, ImageFont
+
 
 def draw(images_path, labels_path):
-    pa = Path.cwd() / 'video-test' / 'dt-racconcat'
+    pa = Path.cwd() / 'video-test' / 'dt-raccon-cat'
     pal = Path(pa / labels_path)
     dir_list = sorted(pal.glob('*'))
     for each in dir_list:
@@ -18,7 +19,7 @@ def draw_labels_on_image(path, images_path, labels_path, file_name) -> None:
     image = Image.open(f'{path}/{images_path}/{file_name}.jpg')
     width, height = image.size
 
-    with open(labels_path / f"{file_name}.txt") as file:
+    with open(labels_path / f'{file_name}.txt') as file:
         for line in file:
             class_id, x_center, y_center, width_factor, height_factor = line.split()
             x = float(x_center) * width
@@ -26,7 +27,7 @@ def draw_labels_on_image(path, images_path, labels_path, file_name) -> None:
             width_factor = int(float(width_factor) * width)
             height_factor = int(float(height_factor) * height)
 
-            font = ImageFont.truetype("arial.ttf", 15)
+            font = ImageFont.truetype('arial.ttf', 15)
             draw = ImageDraw.Draw(image)
             draw.text((x + 50, y + 50), class_id, font=font, fill=(255, 0, 0))
             draw.rectangle(

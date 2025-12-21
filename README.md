@@ -11,7 +11,13 @@
 
 ***Track Anything Annotate*** is a flexible tool for tracking, segmentation, and annotation of videos. It allows creating datasets from videos in YOLO and COCO formats. It is based on Segment Anything 2 and allows specifying any objects for tracking and segmentation.
 
+**Track Anything Annotate** is an open-source project developed with community support. Your feedback and suggestions for improvement are incredibly valuable to us.
+We're especially interested in learning how you use track-anything-annotate in your projects. If you're willing to share your experiences or use cases (even small, experimental ones), please email us at **lnikioffic@gmail.com**. This will not only help us improve the tool but may also serve as a basis for mentioning your project in future publications.
+
 Read this in other languages: [English](README.md) | [Русский](README.ru.md)
+
+---
+
 ## Quick Start
 
 ### 🛠️ Installation via `uv`
@@ -50,6 +56,10 @@ Type of saving
 uv run annotation.py --video-path path_to_video --names-class name_class --type-save yolo
 ```
 
+Instructions for creating a dataset via [json](video-test/INSTRUCTION.md)
+```bash
+uv run annotate_json.py --video-path path_to_video --json-path path_to_json --type-save yolo
+```
 ---
 
 ### Installation via `pip`
@@ -89,15 +99,18 @@ python checkpoints/download_models.py
 python demo.py
 
 # Dataset Creation
-python annotation.py
+python annotation.py --video-path path_to_video --names-class name_class --type-save yolo
+
+# or
+python annotate_json.py --video-path path_to_video --json-path path_to_json --type-save yolo
 ```
 
 ## 🗺️ Roadmap and Improvements
 
 *   [x] Tracking single class export in YOLO.
 *   [x] **New export formats:** Adding support for COCO JSON.
+*   [x] **Multi-class annotation:** Ability to track multiple different classes.
 *   [ ] **New export formats:** Adding support for Pascal VOC XML.      
-*   [ ] **Multi-class annotation:** Ability to track multiple different classes.
 *   [ ] **Image annotation:** Ability to collect and annotate your own dataset based on images.
 
 ## 📚 Citation 

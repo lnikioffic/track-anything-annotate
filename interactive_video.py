@@ -10,64 +10,70 @@ from tools.annotations_prompts_types import AnnotationVideoInfo
 
 class InteractVideo:
     def __init__(
-        self, video_path: str, keyframe_interval: int = 3, max_points: int = 10
+        self,
+        video_path: str,
+        keyframe_interval: int = 3,
+        max_points_per_frame: int = 15,
     ):
         self.video_path = video_path
-        self.tmpdir = tempfile.TemporaryDirectory()
+        self.keyframe_interval = keyframe_interval
+        self.max_points_per_frame = max_points_per_frame
+
         self.frames_path: list[str] = []
-        self.keypoints: dict[
+        self.keypoints_per_frame: dict[
             int, list[tuple[int, int]]
         ] = {}  # {frame_index: [(x1,y1), (x2,y2), ...]}
-        self.keyframe_interval = keyframe_interval
         self.current_frame_idx = 0
+        self.current_points: list[tuple[int, int]] = []
         self.history: list[int] = []  # For tracking skipped frames
-        self.max_points = max_points
+
         self.fps = 0.0
         self.count_frames = 0
-        self.current_points: list[tuple[int, int]] = []
+
+        self.tmpdir = tempfile.TemporaryDirectory()
+        self._window_name = 'Frame'
 
     def extract_frames(
         self, frames_to_propagate: int = 0, max_width: int = 1280, max_height: int = 720
     ):
         cap = cv2.VideoCapture(self.video_path)
-
         if not cap.isOpened():
             raise RuntimeError(f'Cannot open video: {self.video_path}')
 
         self.fps = cap.get(cv2.CAP_PROP_FPS)
         self.count_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-        if frames_to_propagate <= 0 or frames_to_propagate > self.count_frames:
-            frames_to_propagate = self.count_frames
-
+        frames_to_propagate = min(
+            frames_to_propagate or self.count_frames, self.count_frames
+        )
         frame_index = 0
 
-        original_width = int(cap.get(3))
-        original_height = int(cap.get(4))
-        self.frame_size = (original_width, original_height)
+        self.frame_size = (
+            int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)),
+            int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT)),
+        )
 
         print(f'Extracting frames from {self.video_path} into a temporary dir...')
-        bar = progressbar.ProgressBar(max_value=frames_to_propagate)
 
+        bar = progressbar.ProgressBar(max_value=frames_to_propagate)
         while True:
             ret, frame = cap.read()
             if not ret:
                 break
             if frame_index >= frames_to_propagate:
                 break
-            # Проверка и изменение размера кадра
-            if max_width is not None or max_height is not None:
-                h, w = frame.shape[:2]
-                ratio_w = max_width / w if max_width else float('inf')
-                ratio_h = max_height / h if max_height else float('inf')
-                ratio = min(ratio_w, ratio_h, 1.0)  # Не увеличиваем изображение
 
-                if ratio < 1.0:
-                    new_size = (int(w * ratio), int(h * ratio))
-                    frame = cv2.resize(frame, new_size)
-                    # Обновляем размер кадра для первого кадра
-                    if frame_index == 0:
-                        self.frame_size = new_size
+            h, w = frame.shape[:2]
+            ratio_w = max_width / w if max_width else 1.0
+            ratio_h = max_height / h if max_height else 1.0
+            ratio = min(ratio_w, ratio_h, 1.0)  # Не увеличиваем изображение
+
+            if ratio < 1.0:
+                frame = cv2.resize(frame, (int(w * ratio), int(h * ratio)))
+                # Обновляем размер кадра для первого кадра
+                if frame_index == 0:
+                    self.frame_size = (frame.shape[1], frame.shape[0])
+
             frame_path = Path(self.tmpdir.name) / f'frame_{frame_index:06d}.jpg'
             cv2.imwrite(str(frame_path), frame)
             self.frames_path.append(str(frame_path))
@@ -81,8 +87,8 @@ class InteractVideo:
 
     def collect_keypoints(self):
         """Собирает ключевые точки с поддержкой навигации"""
-        cv2.namedWindow('Frame')
-        cv2.setMouseCallback('Frame', self.mouse_callback)
+        cv2.namedWindow(self._window_name)
+        cv2.setMouseCallback(self._window_name, self._mouse_callback)
 
         saved_flag = False
 
@@ -91,16 +97,16 @@ class InteractVideo:
             is_keyframe = self.current_frame_idx % self.keyframe_interval == 0
 
             if is_keyframe:
-                self.current_points = self.keypoints.get(
+                self.current_points = self.keypoints_per_frame.get(
                     self.current_frame_idx, []
                 ).copy()
-                self.show_frame_with_controls(frame.copy())
+                self._show_frame_with_controls(frame.copy())
 
                 while True:
                     key = cv2.waitKey(100)
 
                     if key == ord('s'):  # Enter
-                        self.keypoints[self.current_frame_idx] = (
+                        self.keypoints_per_frame[self.current_frame_idx] = (
                             self.current_points.copy()
                         )
                         self.history.append(self.current_frame_idx)
@@ -108,7 +114,7 @@ class InteractVideo:
                         saved_flag = True
                         break
                     elif key == ord('w'):  # empty
-                        self.keypoints[self.current_frame_idx] = []
+                        self.keypoints_per_frame[self.current_frame_idx] = []
                         self.history.append(self.current_frame_idx)
                         self.current_frame_idx += 1
                         saved_flag = False
@@ -123,21 +129,21 @@ class InteractVideo:
                     elif key in (ord('q'), 27):
                         cv2.destroyAllWindows()
                         if saved_flag:
-                            self.keypoints[len(self.frames_path) - 1] = []
+                            self.keypoints_per_frame[len(self.frames_path) - 1] = []
                         return
             else:
                 # Показываем обычные кадры без остановки
-                cv2.imshow('Frame', frame)
+                cv2.imshow(self._window_name, frame)
                 key = cv2.waitKey(1)
                 if key in [ord('q'), 27]:
                     if saved_flag:
-                        self.keypoints[len(self.frames_path) - 1] = []
+                        self.keypoints_per_frame[len(self.frames_path) - 1] = []
                     break
                 self.current_frame_idx += 1
 
         cv2.destroyAllWindows()
 
-    def show_frame_with_controls(self, frame):
+    def _show_frame_with_controls(self, frame):
         """Показывает кадр с элементами управления"""
         self.current_frame = frame
         h, w = self.current_frame.shape[:2]
@@ -171,26 +177,26 @@ class InteractVideo:
         for x, y in self.current_points:
             cv2.circle(self.current_frame, (x, y), 5, (0, 0, 255), -1)
 
-        cv2.imshow('Frame', self.current_frame)
+        cv2.imshow(self._window_name, self.current_frame)
 
-    def mouse_callback(self, event, x, y, flags, param):
+    def _mouse_callback(self, event, x, y, flags, param):
         if event != cv2.EVENT_LBUTTONDOWN:
             return
         if self.current_frame_idx % self.keyframe_interval != 0:
             return
-        if len(self.current_points) >= self.max_points:
+        if len(self.current_points) >= self.max_points_per_frame:
             print('Point limit')
             return
         print(f'Frame {self.current_frame_idx}')
         self.current_points.append((x, y))
         print(f'Point added: ({x}, {y})')
         cv2.circle(self.current_frame, (x, y), 5, (0, 0, 255), -1)
-        cv2.imshow('Frame', self.current_frame)
+        cv2.imshow(self._window_name, self.current_frame)
 
     def get_results(self) -> AnnotationVideoInfo:
         return {
             'frames_path': self.frames_path,
-            'keypoints': self.keypoints,
+            'keypoints': self.keypoints_per_frame,
         }
 
 
@@ -199,6 +205,7 @@ if __name__ == '__main__':
     controller.extract_frames()  # Сначала извлекаем все кадры
     controller.collect_keypoints()
     results = controller.get_results()
+    print(results['keypoints'])
     print(f'Всего кадров: {len(results["frames_path"])}')
     for frame_idx, points in results['keypoints'].items():
         if points:

@@ -12,7 +12,7 @@ from XMem2.inference.interact.interactive_utils import overlay_davis
 from segmenter import Segmenter
 from tools.mask_display import visualize_wb_mask, mask_map
 from tools.contour_detector import getting_coordinates
-from tools.converter import merge_masks, extract_color_regions
+from tools.converter import merge_masks, colored_mask_to_indices
 
 
 class TrackerCore:
@@ -97,7 +97,7 @@ if __name__ == '__main__':
         masks, scores, logits = seg.predict(prompts, mode)
         maskss.append(masks[np.argmax(scores)])
     _, unique_mask = merge_masks(maskss)
-    mask_indices, colors = extract_color_regions(unique_mask)
+    mask_indices, colors = colored_mask_to_indices(unique_mask)
     
     from tools.mask_display import mask_map
     from tools.contour_detector import get_filtered_bboxes

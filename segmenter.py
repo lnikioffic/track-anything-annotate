@@ -5,7 +5,7 @@ from sam2.build_sam import build_sam2
 from sam2.sam2_image_predictor import SAM2ImagePredictor
 
 from config import DEVICE
-from tools.converter import extract_color_regions, merge_masks
+from tools.converter import colored_mask_to_indices, merge_masks
 from tools.mask_display import visualize_unique_mask
 from XMem2.inference.interact.interactive_utils import overlay_davis
 
@@ -148,7 +148,7 @@ if __name__ == '__main__':
 
     mask, unique_mask = merge_masks(maskss)
 
-    mask_indices, colors = extract_color_regions(unique_mask)
+    mask_indices, colors = colored_mask_to_indices(unique_mask)
     print('Классы:', np.unique(mask_indices))
 
     f = overlay_davis(frame, mask_indices)

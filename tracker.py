@@ -3,40 +3,43 @@ import numpy as np
 import psutil
 from tqdm import tqdm
 
-from tools.converter import merge_masks, extract_color_regions
-from tracker_core_xmem2 import TrackerCore
+from interactive_video import InteractVideo
+from sam_controller import SamController
+from tools.annotations_prompts_types import AnnotationInfo, Prompt
+from tools.converter import colored_mask_to_indices, merge_masks
 from tools.overlay_image import painter_borders
 from XMem2.inference.interact.interactive_utils import overlay_davis
-from sam_controller import SegmenterController
-from interactive_video import InteractVideo
-from tools.annotations_prompts_types import Prompt
+from xmem2_tracker import TrackerCore
 
 
 class Tracker:
-    def __init__(
-        self, segmenter_controller: SegmenterController, tracker_core: TrackerCore
-    ):
+    def __init__(self, segmenter_controller: SamController, tracker_core: TrackerCore):
         self.sam_controller = segmenter_controller
         self.tracker = tracker_core
         print(f'used {TrackerCore.name_version}')
 
-    def select_object(self, prompts: Prompt) -> np.ndarray:
-        mode, processed_prompts = self.sam_controller.create_prompts(prompts)
-        results = self.sam_controller.predict_from_prompts(mode, processed_prompts)
-        results_masks = [
-            result[np.argmax(scores)] for result, scores, logits in results
-        ]
-        mask, unique_mask = merge_masks(results_masks)
-        mask_indices, colors = extract_color_regions(unique_mask)
-        print('Классы:', np.unique(mask_indices))
+    def set_image(self, image: np.ndarray):
+        self.sam_controller.set_image(image)
+
+    def segment_objects(self, annotations_info: list[AnnotationInfo]) -> np.ndarray:
+        masks = []
+        for annotation in annotations_info:
+            mode, processed_prompts = self.sam_controller.parse_prompts(
+                annotation.prompt
+            )
+            results = self.sam_controller.predict_from_prompts(mode, processed_prompts)
+            results = [result[np.argmax(scores)] for result, scores, logits in results]
+            masks.extend(results)
+        _, unique_mask = merge_masks(masks)
+        mask_indices, colors = colored_mask_to_indices(unique_mask)
         return mask_indices
 
-    def tracking(
+    def track_objects(
         self,
         frames: list[np.ndarray],
         template_mask: np.ndarray,
         exhaustive: bool = False,
-    ) -> list:
+    ) -> list[np.ndarray]:
         masks = []
         for i in tqdm(range(len(frames)), desc='Tracking'):
             current_memory_usage = psutil.virtual_memory().percent
@@ -55,6 +58,10 @@ class Tracker:
                 mask = self.tracker.track(frames[i])
                 masks.append(mask)
         return masks
+
+    def reset(self):
+        self.sam_controller.reset_image()
+        self.tracker.clear_memory()
 
     # def tracking_cut(
     #     self,
@@ -92,13 +99,13 @@ if __name__ == '__main__':
     video.collect_keypoints()
     results = video.get_results()
 
-    segmenter_controller = SegmenterController()
+    segmenter_controller = SamController()
     tracker_core = TrackerCore()
     tracker = Tracker(segmenter_controller, tracker_core)
 
     frame_sources = results['frames_path']
     frames = [cv2.imread(f) for f in frame_sources]
-    
+
     prompts: Prompt = {
         'mode': 'point',
         'point_coords': [[531, 230], [45, 321], [226, 360], [194, 313]],
@@ -111,14 +118,14 @@ if __name__ == '__main__':
     #     'point_labels': [1, 1],
     # }
 
-    tracker.sam_controller.load_image(frames[0])
-    mask = tracker.select_object(prompts)
+    tracker.set_image(frames[0])
+    mask = tracker.segment_objects(prompts)
     image_m = overlay_davis(frames[0], mask)
     cv2.imshow('image', image_m)
     cv2.imshow('imageza;epa', frames[63])
     cv2.waitKey(0)
     cv2.destroyAllWindows()
-    masks = tracker.tracking(frames, mask)
+    masks = tracker.track_objects(frames, mask)
 
     # result = []
     # print(len(results['keypoints']))

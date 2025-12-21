@@ -2,18 +2,13 @@ import argparse
 import json
 
 import cv2
-import numpy as np
 import progressbar
-import psutil
-from tqdm import tqdm
 
-from sam_controller import SegmenterController
+from dataset_export.pipeline import create_dataset
+from sam_controller import SamController
 from tools.annotations_prompts_types import AnnotationInfo, AnnotationItem
-from tools.contour_detector import getting_coordinates
-from tools.converter import extract_color_regions, merge_masks
-from tools.data_exporter import create_dataset
-from tracker_core_xmem2 import TrackerCore
-from XMem2.inference.interact.interactive_utils import overlay_davis
+from tracker import Tracker
+from xmem2_tracker import TrackerCore
 
 
 def extract_frames(
@@ -29,8 +24,7 @@ def extract_frames(
 
     count_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
 
-    if frames_to_propagate <= 0 or frames_to_propagate > count_frames:
-        frames_to_propagate = count_frames
+    frames_to_propagate = min(frames_to_propagate or count_frames, count_frames)
 
     frame_index = 0
     bar = progressbar.ProgressBar(max_value=frames_to_propagate)
@@ -58,68 +52,38 @@ def extract_frames(
     return images
 
 
-def segmentation(annotations_info: list[AnnotationInfo], image):
-    segmenter_controller = SegmenterController()
-    segmenter_controller.load_image(image)
-    masks = []
-    for ann in annotations_info:
-        mode, processed_prompts = segmenter_controller.create_prompts(ann.prompt)
-        results = segmenter_controller.predict_from_prompts(mode, processed_prompts)
-        results = [result[np.argmax(scores)] for result, scores, logits in results]
-        masks.extend(results)
-    return masks
-
-
-def tracking(images, template_mask):
-    tracker = TrackerCore()
-    masks = []
-    for i in tqdm(range(len(images)), desc='Tracking'):
-        current_memory_usage = psutil.virtual_memory().percent
-        if current_memory_usage > 90:
-            break
-        if i == 0:
-            mask = tracker.track(images[i], template_mask)
-            masks.append(mask)
-        else:
-            mask = tracker.track(images[i])
-            masks.append(mask)
-    return masks
-
-
 def get_info_prompt(annotation_item: list[AnnotationItem]):
-    names_class = []
-    dicts_list = []
+    class_names = []
     annotations_info = []
-    order = 0
+    class_names_dict = {}
+    i = 0
     for item in annotation_item:
-        names_class.append(item['class_name'])
+        class_name = item['class_name']
+        if class_name not in class_names_dict:
+            class_names_dict[class_name] = i
+            class_names.append(class_name)
+            i += 1
+
         prompt = item['prompt']
         if prompt['mode'] not in ['point', 'box', 'both']:
             raise ValueError(f'Invalid mode: {prompt["mode"]}')
 
         if prompt['mode'] == 'point':
             labels = prompt['point_coords']
-            info = AnnotationInfo(
-                class_name=item['class_name'],
-                prompt=prompt,
-                count_objects=len(labels),
-                order=order,
-            )
-            dicts_list.append(prompt)
-            annotations_info.append(info)
         elif prompt['mode'] == 'box':
             labels = prompt['boxes']
-            info = AnnotationInfo(
-                class_name=item['class_name'],
-                prompt=prompt,
-                count_objects=len(labels),
-                order=order,
-            )
-            dicts_list.append(prompt)
-            annotations_info.append(info)
-        order += 1
+        else:
+            labels = prompt['boxes']
 
-    return names_class, annotations_info
+        annotation_info = AnnotationInfo(
+            class_name=class_name,
+            prompt=prompt,
+            count_objects=len(labels),
+            order=class_names_dict[class_name],
+        )
+        annotations_info.append(annotation_info)
+
+    return class_names, annotations_info
 
 
 def load_json(path):
@@ -147,22 +111,27 @@ def parse_args():
 
 
 def main(json_path, video_path, type_save):
-    images = extract_frames(video_path, 100)
+    images = extract_frames(video_path)
     json_data = load_json(json_path)
 
     data = list(map(lambda x: AnnotationItem(**x), json_data))
-    names_class, annotations_info = get_info_prompt(data)
-    masks = segmentation(annotations_info, images[0])
-    _, unique_mask = merge_masks(masks)
-    mask_indices, colors = extract_color_regions(unique_mask)
+    class_names, annotations_info = get_info_prompt(data)
 
-    masks = tracking(images, mask_indices)
+    segmenter_controller = SamController()
+    tracker_core = TrackerCore()
+    tracker = Tracker(segmenter_controller, tracker_core)
+
+    tracker.set_image(images[0])
+    mask = tracker.segment_objects(annotations_info)
+
+    masks = tracker.track_objects(images, mask)
+    tracker.reset()
 
     i = 0
     id_map = {}
     for ann in annotations_info:
         key = list(ann.prompt.keys())[1]
-        for p in ann.prompt[f'{key}']:
+        for _ in ann.prompt[f'{key}']:
             mask_id = i + 1
             i += 1
             id_map[mask_id] = {
@@ -170,9 +139,8 @@ def main(json_path, video_path, type_save):
                 'order': ann.order,
                 'mask_slice_index': i,
             }
-    
-    print(id_map)
-    create_dataset(images, masks, names_class, id_map, type_save)
+
+    create_dataset(images, masks, class_names, id_map, type_save)
 
 
 if __name__ == '__main__':
@@ -195,6 +163,8 @@ if __name__ == '__main__':
 
     # from tools.contour_detector import get_filtered_bboxes
     # from tools.mask_display import mask_map
+    # from tools.contour_detector import getting_coordinates
+    # from XMem2.inference.interact.interactive_utils import overlay_davis
 
     # def check_coords(mask):
     #     coords = []

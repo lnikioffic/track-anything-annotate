@@ -2,7 +2,7 @@ import cv2
 import numpy as np
 
 
-def merge_masks(masks, method='max'):
+def merge_masks(masks):
     if isinstance(masks, list):
         masks = np.array(masks)
 
@@ -37,7 +37,7 @@ def merge_masks(masks, method='max'):
     return mask_colored, unique_mask
 
 
-def extract_color_regions(mask):
+def colored_mask_to_indices(mask):
     img_rgb = cv2.cvtColor(mask, cv2.COLOR_BGR2RGB)
     colors, inverse = np.unique(img_rgb.reshape(-1, 3), axis=0, return_inverse=True)
     mask_indices = inverse.reshape(img_rgb.shape[:2])
