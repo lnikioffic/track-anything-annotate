@@ -5,6 +5,7 @@ from PIL import Image, ImageDraw
 
 from config import DEVICE
 from sam_controller import SamController
+from tools.annotations_prompts_types import AnnotationInfo
 from tracker import Tracker
 from XMem2.inference.interact.interactive_utils import overlay_davis
 from xmem2_tracker import TrackerCore
@@ -27,12 +28,11 @@ def extract_all_frames(video_input):
             frames.append(cv2.cvtColor(frame, cv2.COLOR_BGR2RGB))
     except (OSError, TypeError, ValueError, KeyError, SyntaxError) as e:
         print('read_frame_source:{} error. {}\n'.format(video_path, str(e)))
-
-    tracker.sam_controller.set_image(frames[0])
     video_state = {
         'fps': fps,
         'count_frames': count_frames,
     }
+    tracker.set_image(frames[0])
     video_info = f'FPS: {video_state["fps"]} , Кадров: {video_state["count_frames"]}, Будет обработано: {len(frames)}'
     return frames[0], frames, video_state, video_info
 
@@ -53,13 +53,13 @@ def on_image_click(image, evt: gr.SelectData, annotations_state):
 
 
 # --- Разметка всех кадров ---
-def tracking(frames: np.ndarray, video_state: dict) -> list[np.ndarray]:
+def tracking(frames: list[np.ndarray], video_state: dict):
     masks = tracker.track_objects(frames, video_state['mask'])
     video_state['annotation_masks'] = masks
     video_state['annotation_images'] = [
         overlay_davis(frame, mask) for frame, mask in zip(frames, masks)
     ]
-    tracker.tracker.clear_memory()
+    tracker.reset()
     annotation_info = f'Аннотированных кадров: {len(video_state["annotation_images"])}'
     return video_state, video_state['annotation_images'], annotation_info
 
@@ -67,7 +67,7 @@ def tracking(frames: np.ndarray, video_state: dict) -> list[np.ndarray]:
 # --- Аннотация ---
 def annotations(
     frame: np.ndarray, annotations_state: dict, video_state: dict, mask_info
-) -> list[np.ndarray]:
+):
     if len(annotations_state['point']) == 0:
         mask_info = 'Поставьте точки на объекты'
         return frame, video_state, mask_info
@@ -76,8 +76,16 @@ def annotations(
         'point_coords': annotations_state['point'],
         'point_labels': [1] * len(annotations_state['point']),
     }
-    mask = tracker.segment_objects(prompts)
-    tracker.sam_controller.reset_image()
+    annotation_info = AnnotationInfo(
+        class_name='object',
+        prompt=prompts,
+        count_objects=len(annotations_state['point']),
+        order=0,
+    )
+    print(prompts)
+
+    mask = tracker.segment_objects([annotation_info])
+    tracker.reset()
     image = overlay_davis(frame, mask)
     video_state['mask'] = mask
     return image, video_state, mask_info
