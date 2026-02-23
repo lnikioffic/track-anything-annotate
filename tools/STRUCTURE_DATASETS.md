@@ -8,7 +8,7 @@ dataset_roo/
                 image_0001.jpg
                 image_0002.jpg
                 image_0003.jpg
-            lables/
+            labels/
                 image_0001.txt
                 image_0002.txt
                 image_0003.txt
@@ -28,7 +28,7 @@ dataset_roo/
             image_0006.jpg
             image_0009.jpg
             image_00020.jpg
-    lables/
+    labels/
         train/
             image_0001.txt
             image_0002.txt

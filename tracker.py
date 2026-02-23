@@ -4,9 +4,8 @@ import psutil
 from tqdm import tqdm
 
 from interactive_video import InteractVideo
-from sam_controller import SamController
+from sam_controller import SamController, SegmentationService
 from tools.annotations_prompts_types import AnnotationInfo, Prompt
-from tools.converter import colored_mask_to_indices, merge_masks
 from tools.overlay_image import painter_borders
 from XMem2.inference.interact.interactive_utils import overlay_davis
 from xmem2_tracker import TrackerCore
@@ -14,25 +13,22 @@ from xmem2_tracker import TrackerCore
 
 class Tracker:
     def __init__(self, segmenter_controller: SamController, tracker_core: TrackerCore):
-        self.sam_controller = segmenter_controller
+        self._segmentation = SegmentationService(segmenter_controller)
         self.tracker = tracker_core
         print(f'used {TrackerCore.name_version}')
+
+    @property
+    def sam_controller(self) -> SamController:
+        return self._segmentation.sam_controller
 
     def set_image(self, image: np.ndarray):
         self.sam_controller.set_image(image)
 
+    def reset_image(self):
+        self.sam_controller.reset_image()
+
     def segment_objects(self, annotations_info: list[AnnotationInfo]) -> np.ndarray:
-        masks = []
-        for annotation in annotations_info:
-            mode, processed_prompts = self.sam_controller.parse_prompts(
-                annotation.prompt
-            )
-            results = self.sam_controller.predict_from_prompts(mode, processed_prompts)
-            results = [result[np.argmax(scores)] for result, scores, logits in results]
-            masks.extend(results)
-        _, unique_mask = merge_masks(masks)
-        mask_indices, colors = colored_mask_to_indices(unique_mask)
-        return mask_indices
+        return self._segmentation.segment_objects(annotations_info)
 
     def track_objects(
         self,
@@ -40,7 +36,8 @@ class Tracker:
         template_mask: np.ndarray,
         exhaustive: bool = False,
     ) -> list[np.ndarray]:
-        masks = []
+        masks: list[np.ndarray] = []
+        
         for i in tqdm(range(len(frames)), desc='Tracking'):
             current_memory_usage = psutil.virtual_memory().percent
             if current_memory_usage > 90:
@@ -60,7 +57,7 @@ class Tracker:
         return masks
 
     def reset(self):
-        self.sam_controller.reset_image()
+        self.reset_image()
         self.tracker.clear_memory()
 
     # def tracking_cut(
@@ -173,9 +170,7 @@ if __name__ == '__main__':
     #     masks += m
 
     filename = 'helmet_border.mp4'
-    output = cv2.VideoWriter(
-        filename, cv2.VideoWriter_fourcc(*'XVID'), video.fps, video.frame_size
-    )
+    output = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'XVID'), video.fps, video.frame_size)
     for frame, mask in zip(frames, masks):
         f = painter_borders(frame, mask)
         # f = overlay_davis(frame, mask)

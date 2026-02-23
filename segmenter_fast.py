@@ -1,11 +1,12 @@
 import cv2
 import numpy as np
 import torch
-from fastsam import FastSAM, FastSAMPrompt, FastSAMPredictor
+from fastsam import FastSAM, FastSAMPredictor, FastSAMPrompt
 from fastsam.utils import convert_box_xywh_to_xyxy
+
 from config import DEVICE
-from tools.mask_display import visualize_unique_mask, visualize_wb_mask
 from tools.contour_detector import getting_coordinates
+from tools.mask_display import visualize_unique_mask, visualize_wb_mask
 
 
 class Segmenter:
@@ -14,9 +15,7 @@ class Segmenter:
         self.model = FastSAM(model_path)
         overrides = self.model.overrides.copy()
         overrides['conf'] = 0.25
-        overrides.update(
-            device=self.device, retina_masks=True, imgsz=1024, conf=0.7, iou=0.9
-        )
+        overrides.update(device=self.device, retina_masks=True, imgsz=1024, conf=0.7, iou=0.9)
         overrides['mode'] = 'predict'
         assert overrides['mode'] in ['track', 'predict']
         overrides['save'] = False
@@ -31,25 +30,21 @@ class Segmenter:
     @torch.no_grad()
     def prompt(self, image: np.ndarray):
         everything_results = self.model.predictor(image)
-        self.prompt_process = FastSAMPrompt(
-            image, everything_results, device=self.device
-        )
+        self.prompt_process = FastSAMPrompt(image, everything_results, device=self.device)
 
     def get_mask_by_box_prompt(self, bboxes: list[int]):
         box_prompt = [convert_box_xywh_to_xyxy(box) for box in bboxes]
         self.mask = self.prompt_process.box_prompt(bboxes=box_prompt)
 
-    def get_mask_by_point_promt(self, points: list[int]):
-        lables = [1 for _ in range(len(points))]
-        self.mask = self.prompt_process.point_prompt(points, lables)
+    def get_mask_by_point_prompt(self, points: list[int]):
+        labels = [1 for _ in range(len(points))]
+        self.mask = self.prompt_process.point_prompt(points, labels)
 
     def convert_mask_to_color(self):
         mask = self.mask
         mask = np.uint8(mask) * 255
         mask_end = np.zeros((mask.shape[1], mask.shape[2], 3), dtype=np.uint8)
-        colors = [
-            tuple(list(np.random.randint(0, 255, size=3))) for _ in range(len(mask))
-        ]
+        colors = [tuple(list(np.random.randint(0, 255, size=3))) for _ in range(len(mask))]
 
         for i in range(len(mask)):
             color_mask = np.zeros_like(mask_end)
@@ -80,7 +75,7 @@ def get_coordinates(event, x, y, flags, param):
     if event == cv2.EVENT_LBUTTONDOWN:  # Если нажата левая кнопка мыши
         points = []
         points.append((x, y))  # Добавляем координаты точки в список
-        print(f"Координаты: ({x}, {y})")  # Выводим координаты в консоль
+        print(f'Координаты: ({x}, {y})')  # Выводим координаты в консоль
 
 
 if __name__ == '__main__':
@@ -101,7 +96,7 @@ if __name__ == '__main__':
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
     seg.prompt = frame
     seg.get_mask_by_box_prompt(bboxes)
-    # seg.get_mask_by_point_promt(points)
+    # seg.get_mask_by_point_prompt(points)
     mask, unique_mask = seg.convert_mask_to_color()
     print(np.unique(unique_mask))
     mask = visualize_wb_mask(unique_mask)

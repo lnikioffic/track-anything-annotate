@@ -10,14 +10,14 @@ class PointPrompt(TypedDict):
 
 class BoxPrompt(TypedDict):
     mode: str
-    boxes: list[list[int] | list[list[int]]]
+    boxes: list[list[int]]
 
 
 class BothPrompt(TypedDict):
     mode: str
     point_coords: list[list[int] | list[list[int]]]
     point_labels: list[int | list[int]]
-    boxes: list[list[int] | list[list[int]]]
+    boxes: list[list[int]]
 
 
 Prompt = PointPrompt | BoxPrompt | BothPrompt

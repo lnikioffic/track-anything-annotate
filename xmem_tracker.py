@@ -2,20 +2,20 @@ import cv2
 import numpy as np
 import psutil
 import torch
-from XMem.inference.inference_core import InferenceCore
-from XMem.model.network import XMem
-from XMem.inference.data.mask_mapper import MaskMapper
-from config import XMEM_CONFIG, DEVICE
 from torchvision import transforms
-from XMem.util.range_transform import im_normalization
-from XMem.inference.interact.interactive_utils import overlay_davis
+
+from config import DEVICE, XMEM_CONFIG
 from segmenter import Segmenter
-from tools.mask_display import visualize_unique_mask, visualize_wb_mask, mask_map
 from tools.contour_detector import getting_coordinates
+from tools.mask_display import mask_map, visualize_unique_mask, visualize_wb_mask
+from XMem.inference.data.mask_mapper import MaskMapper
+from XMem.inference.inference_core import InferenceCore
+from XMem.inference.interact.interactive_utils import overlay_davis
+from XMem.model.network import XMem
+from XMem.util.range_transform import im_normalization
 
 
 class TrackerCore:
-
     name_version = 'XMem'
 
     def __init__(self, device: str = DEVICE):
@@ -23,22 +23,21 @@ class TrackerCore:
         if self.device.lower() != 'cpu':
             self.network = XMem(XMEM_CONFIG, 'checkpoints/XMem.pth').eval().to('cuda')
         else:
-            self.network = XMem(
-                XMEM_CONFIG, 'checkpoints/XMem.pth', map_location='cpu'
-            ).eval()
+            self.network = XMem(XMEM_CONFIG, 'checkpoints/XMem.pth', map_location='cpu').eval()
         self.processor = InferenceCore(self.network, XMEM_CONFIG)
 
-        self.im_transform = transforms.Compose(
-            [transforms.ToTensor(), im_normalization]
-        )
+        self.im_transform = transforms.Compose([transforms.ToTensor(), im_normalization])
         self.mapper = MaskMapper()
 
     @torch.no_grad()
     def track(
-        self, frame: np.ndarray, mask_segmet: np.ndarray | None = None, exhaustive=False
+        self,
+        frame: np.ndarray,
+        mask_segment: np.ndarray | None = None,
+        exhaustive: bool = False,
     ):
-        if mask_segmet is not None:
-            mask, labels = self.mapper.convert_mask(mask_segmet, exhaustive)
+        if mask_segment is not None:
+            mask, labels = self.mapper.convert_mask(mask_segment, exhaustive)
             mask = torch.Tensor(mask).to(self.device)
             self.processor.set_all_labels(list(self.mapper.remappings.values()))
         else:
@@ -61,7 +60,7 @@ class TrackerCore:
     @torch.no_grad()
     def clear_memory(self):
         self.processor.clear_memory()
-        self.mapper.clear_lables()
+        self.mapper.clear_labels()
         torch.cuda.empty_cache()
 
 
@@ -81,7 +80,7 @@ if __name__ == '__main__':
     seg.clear_memory()
     masks = []
     images = []
-    traker = TrackerCore()
+    tracker = TrackerCore()
     frames_to_propagate = 200
     current_frame_index = 0
     cap = cv2.VideoCapture(path)
@@ -97,11 +96,11 @@ if __name__ == '__main__':
             break
 
         if current_frame_index == 0:
-            mask = traker.track(frame_v, unique_mask)
+            mask = tracker.track(frame_v, unique_mask)
             masks.append(mask)
             images.append(frame_v)
         else:
-            mask = traker.track(frame_v)
+            mask = tracker.track(frame_v)
             masks.append(mask)
             images.append(frame_v)
 

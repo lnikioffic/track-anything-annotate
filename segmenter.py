@@ -13,29 +13,42 @@ from XMem2.inference.interact.interactive_utils import overlay_davis
 class Segmenter:
     def __init__(self, device: str = DEVICE):
         self.device = device
-        sam2_checkpoint = 'checkpoints/sam2.1_hiera_large.pt'
-        model_cfg = 'configs/sam2.1/sam2.1_hiera_l.yaml'
-        build = build_sam2(model_cfg, sam2_checkpoint, device=self.device)
-        self.predictor = SAM2ImagePredictor(build)
         self.embedded = False
 
+        sam2_checkpoint = 'checkpoints/sam2.1_hiera_large.pt'
+        model_cfg = 'configs/sam2.1/sam2.1_hiera_l.yaml'
+
+        sam_model = build_sam2(model_cfg, sam2_checkpoint, device=self.device)
+        self.predictor = SAM2ImagePredictor(sam_model)
+        self.original_image: np.ndarray | None = None
+
     @torch.no_grad()
-    def set_image(self, image: np.ndarray):
-        self.original_image = image
+    def set_image(self, image: np.ndarray) -> None:
         if self.embedded:
-            print('please reset_image')
-            return
+            raise RuntimeError('Image already set. Call reset_image() first.')
+
+        self.original_image = image
         self.predictor.set_image(image)
         self.embedded = True
 
     @torch.no_grad()
-    def reset_image(self):
+    def reset_image(self) -> None:
         self.predictor.reset_predictor()
         self.embedded = False
+        self.original_image = None
 
-    def predict(self, prompt, mode='point', multimask=True):
-        assert self.embedded, 'dont set image'
-        assert mode in ['point', 'box', 'both'], 'mode can be point, box or both'
+    @torch.no_grad()
+    def predict(
+        self,
+        prompt: dict,
+        mode: str = 'point',
+        multimask: bool = True,
+    ) -> tuple[np.ndarray, np.ndarray, np.ndarray]:
+        if not self.embedded:
+            raise RuntimeError('Image not set. Call set_image() first.')
+
+        if mode not in ['point', 'box', 'both']:
+            raise RuntimeError('mode can be point, box or both')
 
         if mode == 'point':
             masks, scores, logits = self.predictor.predict(
@@ -115,7 +128,7 @@ if __name__ == '__main__':
     seg = Segmenter()
     seg.set_image(frame)
 
-    maskss = []
+    masks_list = []
     if prompts['mode'] == 'point':
         for point_c, point_l in zip(prompts['point_coords'], prompts['point_labels']):
             prompt = {
@@ -124,29 +137,29 @@ if __name__ == '__main__':
                 'boxes': None,
             }
             masks, scores, logits = seg.predict(prompt, prompts['mode'])
-            maskss.append(masks[np.argmax(scores)])
+            masks_list.append(masks[np.argmax(scores)])
     elif prompts['mode'] == 'box':
         for box in prompts['boxes']:
             prompt = {
                 'boxes': np.array([box]),
             }
             masks, scores, logits = seg.predict(prompt, prompts['mode'], multimask=True)
-            maskss.append(masks[np.argmax(scores)])
+            masks_list.append(masks[np.argmax(scores)])
     else:
         masks, scores, logits = seg.predict(prompts, prompts['mode'], multimask=False)
-        maskss = masks
+        masks_list = masks
         print(len(masks))
 
-    print(len(maskss))
+    print(len(masks_list))
 
-    if len(maskss) < 1:
-        maskss = []
-        for mask in maskss:
+    if len(masks_list) < 1:
+        masks_list = []
+        for mask in masks_list:
             # mask = show_mask(mask.squeeze(0), plt.gca(), random_color=True)
             mask = mask.squeeze(0).astype(np.uint8)
-            maskss.append(mask)
+            masks_list.append(mask)
 
-    mask, unique_mask = merge_masks(maskss)
+    mask, unique_mask = merge_masks(masks_list)
 
     mask_indices, colors = colored_mask_to_indices(unique_mask)
     print('Классы:', np.unique(mask_indices))

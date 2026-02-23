@@ -1,9 +1,8 @@
 import argparse
 import json
 
-import cv2
-import progressbar
 
+from core.video_processor import VideoProcessor
 from dataset_export.pipeline import create_dataset
 from sam_controller import SamController
 from tools.annotations_prompts_types import AnnotationInfo, AnnotationItem
@@ -13,49 +12,21 @@ from xmem2_tracker import TrackerCore
 
 def extract_frames(
     video_path: str,
-    frames_to_propagate: int = 0,
+    frames_to_propagate: int | None = None,
     max_width: int = 1280,
     max_height: int = 720,
-):
-    cap = cv2.VideoCapture(video_path)
-
-    if not cap.isOpened():
-        raise RuntimeError(f'Cannot open video: {video_path}')
-
-    count_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-
-    frames_to_propagate = min(frames_to_propagate or count_frames, count_frames)
-
-    frame_index = 0
-    bar = progressbar.ProgressBar(max_value=frames_to_propagate)
-    images = []
-    while True:
-        ret, frame = cap.read()
-        if not ret:
-            break
-        if frame_index >= frames_to_propagate:
-            break
-        if max_width is not None or max_height is not None:
-            h, w = frame.shape[:2]
-            ratio_w = max_width / w if max_width else float('inf')
-            ratio_h = max_height / h if max_height else float('inf')
-            ratio = min(ratio_w, ratio_h, 1.0)
-
-            if ratio < 1.0:
-                new_size = (int(w * ratio), int(h * ratio))
-                frame = cv2.resize(frame, new_size)
-        images.append(frame)
-        frame_index += 1
-        bar.update(frame_index)
-    bar.finish()
-    cap.release()
-    return images
+) -> list:
+    processor = VideoProcessor(video_path, max_width, max_height)
+    return processor.extract_all_frames(frames_to_propagate)
 
 
-def get_info_prompt(annotation_item: list[AnnotationItem]):
-    class_names = []
-    annotations_info = []
-    class_names_dict = {}
+def get_info_prompt(
+    annotation_item: list[AnnotationItem],
+) -> tuple[list[str], list[AnnotationInfo]]:
+
+    class_names: list[str] = []
+    annotations_info: list[AnnotationInfo] = []
+    class_names_dict: dict[str, int] = {}
     i = 0
     for item in annotation_item:
         class_name = item['class_name']
@@ -105,12 +76,17 @@ def parse_args():
         help='Path to the json file',
         default='video-test/video.json',
     )
-    parser.add_argument('--type-save', type=str, help='Type of saving', default='yolo')
+    parser.add_argument(
+        '--type-save',
+        type=str,
+        help='Type of saving',
+        default='yolo',
+    )
 
     return parser.parse_args()
 
 
-def main(json_path, video_path, type_save):
+def main(json_path: str, video_path: str, type_save: str):
     images = extract_frames(video_path)
     json_data = load_json(json_path)
 

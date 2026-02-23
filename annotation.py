@@ -1,17 +1,14 @@
 import argparse
-from typing import Any
+import sys
+from typing import Any, Optional
 
-import cv2
 import numpy as np
+
 
 from dataset_export.pipeline import create_dataset
 from interactive_video import InteractVideo
 from sam_controller import SamController
-from tools.annotations_prompts_types import (
-    AnnotationInfo,
-    AnnotationVideoInfo,
-    PointPrompt,
-)
+from tools.annotations_prompts_types import AnnotationInfo, PointPrompt
 from tracker import Tracker
 from xmem2_tracker import TrackerCore
 
@@ -20,13 +17,26 @@ def create_track_seed_from_points(
     tracker: Tracker,
     frame_idx: int,
     next_frame_idx: int,
-    point_coords: list[Any],
-    frames_path: list[str],
-):
+    point_coords: list[list[int]],
+    frames: list[np.ndarray],
+) -> Optional[tuple[dict[str, Any], AnnotationInfo]]:
+    """
+    Создание трекинг сида из точек.
+
+    Args:
+        tracker: Трекер.
+        frame_idx: Индекс начального кадра.
+        next_frame_idx: Индекс следующего кадра.
+        point_coords: Координаты точек.
+        frames: Список кадров.
+
+    Returns:
+        tuple[dict, AnnotationInfo] или None: Трекинг сид и аннотация.
+    """
     if not point_coords:
         return None
 
-    frame = np.array(cv2.imread(frames_path[frame_idx]))
+    frame = frames[frame_idx].copy()
 
     prompts: PointPrompt = {
         'mode': 'point',
@@ -35,7 +45,7 @@ def create_track_seed_from_points(
     }
 
     annotation_info = AnnotationInfo(
-        class_name='class_name',
+        class_name='object',
         prompt=prompts,
         count_objects=len(point_coords),
         order=0,
@@ -55,73 +65,104 @@ def create_track_seed_from_points(
 
 
 def create_track_seeds_from_keyframes(
-    tracker: Tracker, video_info: AnnotationVideoInfo
-):
-    keypoints_keys = list(video_info['keypoints'].keys())
-    track_seeds = []
-    annotations_info = []
+    tracker: Tracker,
+    keypoints: dict[int, list[tuple[int, int]]],
+    frames: list[np.ndarray],
+) -> tuple[list[dict], list[AnnotationInfo]]:
+    """
+    Создание трекинг сидов из ключевых кадров.
+
+    Args:
+        tracker: Трекер.
+        keypoints: Ключевые точки.
+        frames: Список кадров.
+
+    Returns:
+        tuple[list[dict], list[AnnotationInfo]]: Трекинг сиды и аннотации.
+    """
+    keypoints_keys = sorted(keypoints.keys())
+    track_seeds: list[dict] = []
+    annotations_info: list[AnnotationInfo] = []
+
     for i in range(len(keypoints_keys) - 1):
         start_frame = keypoints_keys[i]
         end_frame = keypoints_keys[i + 1]
-        point_coords = video_info['keypoints'][start_frame]
+        point_coords = [list(pt) for pt in keypoints[start_frame]]
 
         result = create_track_seed_from_points(
             tracker,
             start_frame,
             end_frame,
             point_coords,
-            video_info['frames_path'],
+            frames,
         )
+
         if result is None:
             continue
 
-        print(f'{start_frame=}, {end_frame=}')
+        print(f'Processing frames {start_frame} to {end_frame}')
         track_seed, annotation_info = result
 
         track_seeds.append(track_seed)
         annotations_info.append(annotation_info)
+
     return track_seeds, annotations_info
 
 
 def track_masks_from_seeds(
-    tracker: Tracker, track_seeds: list[dict], video_info: AnnotationVideoInfo
+    tracker: Tracker,
+    track_seeds: list[dict],
+    frames: list[np.ndarray],
 ) -> tuple[list[np.ndarray], list[np.ndarray]]:
     tracked_frames: list[np.ndarray] = []
     tracked_masks: list[np.ndarray] = []
+
     for seed in track_seeds:
-        start_frame, end_frame = seed['start_frame'], seed['end_frame']
+        start_frame = seed['start_frame']
+        end_frame = seed['end_frame']
+
         if seed['mask'] is not None:
-            frame_sources = video_info['frames_path'][int(start_frame) : int(end_frame)]
-            images = [np.array(cv2.imread(f)) for f in frame_sources]
-
+            images = frames[start_frame:end_frame]
             masks = tracker.track_objects(images, seed['mask'])
-
             tracker.reset()
+
             tracked_masks.extend(masks)
             tracked_frames.extend(images)
+
     return tracked_frames, tracked_masks
 
 
-def main(video_path: str, class_names: list[str], type_save: str):
-    video = InteractVideo(video_path)
+def main(
+    video_path: str,
+    class_names: list[str],
+    type_save: str,
+) -> None:
+
+    # Инициализация интерактивного видео
+    video = InteractVideo(str(video_path))
     video.extract_frames()
     video.collect_keypoints()
 
-    video_info = video.get_results()
+    frames = video.get_frames()
+    keypoints = video.get_keypoints()
 
+    print(f'Collected keypoints from {len(keypoints)} frames')
+
+
+    # Инициализация трекера
     segmenter_controller = SamController()
     tracker_core = TrackerCore()
     tracker = Tracker(segmenter_controller, tracker_core)
 
-    track_seeds: list[dict] = []
-    annotations_info = []
-    track_seed, info = create_track_seeds_from_keyframes(tracker, video_info)
+    # Создание трекинг сидов
+    track_seeds, annotations_info = create_track_seeds_from_keyframes(tracker, keypoints, frames)
 
-    track_seeds.extend(track_seed)
-    annotations_info.extend(info)
     print(f'Count of segments: {len(track_seeds)}')
 
-    images_ann, masks = track_masks_from_seeds(tracker, track_seeds, video_info)
+    # Трекинг масок
+    tracked_frames, tracked_masks = track_masks_from_seeds(tracker, track_seeds, frames)
+
+    # Создание id_map
     i = 0
     id_map = {}
     for ann in annotations_info:
@@ -134,8 +175,9 @@ def main(video_path: str, class_names: list[str], type_save: str):
                 'order': ann.order,
                 'mask_slice_index': i,
             }
-    create_dataset(images_ann, masks, class_names, id_map, type_save)
 
+    create_dataset(tracked_frames, tracked_masks, class_names, id_map, type_save)
+    print('Dataset creation completed')
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Annotation tool')
@@ -146,9 +188,18 @@ def parse_args():
         default='video-test/video.mp4',
     )
     parser.add_argument(
-        '--names-class', type=str, nargs='+', help='Names of classes', default=['thing']
+        '--names-class',
+        type=str,
+        nargs='+',
+        help='Names of classes',
+        default=['thing'],
     )
-    parser.add_argument('--type-save', type=str, help='Type of saving', default='yolo')
+    parser.add_argument(
+        '--type-save',
+        type=str,
+        help='Type of saving',
+        default='yolo',
+    )
     return parser.parse_args()
 
 

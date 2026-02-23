@@ -2,9 +2,9 @@ import cv2
 import numpy as np
 
 from segmenter import Segmenter
+from tools.annotations_prompts_types import AnnotationInfo, PointPrompt, Prompt
 from tools.converter import colored_mask_to_indices, merge_masks
 from tools.mask_display import visualize_unique_mask
-from tools.annotations_prompts_types import PointPrompt, Prompt
 from XMem2.inference.interact.interactive_utils import overlay_davis
 
 
@@ -13,10 +13,7 @@ class SamController:
         self.segmenter = Segmenter()
         self.is_set_image = False
 
-    def set_image(self, image: np.ndarray):
-        """
-        :param image: Изображение в формате NumPy массива (H, W, C).
-        """
+    def set_image(self, image: np.ndarray) -> None:
         if self.is_set_image:
             print('Image already loaded. Reset it before loading a new one.')
             return
@@ -27,7 +24,7 @@ class SamController:
         except Exception as e:
             print(f'Error loading image: {e}')
 
-    def reset_image(self):
+    def reset_image(self) -> None:
         if not self.is_set_image:
             print('No image loaded to reset.')
             return
@@ -79,13 +76,13 @@ class SamController:
         prompts = []
         for box in boxes:
             prompt = {'boxes': np.array([box])}
-            prompts.append((prompt, True))  # multimask=True для каждой рамки
+            prompts.append((prompt, True))
         return prompts
 
     def _process_both_prompts(
         self,
-        point_coords: list[list[int] | list[list[int]] | None],
-        point_labels: list[int | list[int] | None],
+        point_coords: list[list[int] | list[list[int]]],
+        point_labels: list[int | list[int]],
         boxes: list[list[int]],
     ) -> list[tuple[dict[str, np.ndarray], bool]]:
         """
@@ -98,7 +95,7 @@ class SamController:
         prompts = []
         for box, coords, labels in zip(boxes, point_coords, point_labels):
             prompt = {'boxes': np.array([box])}
-            if coords is not None and labels is not None:
+            if coords and labels:
                 prompt['point_coords'] = np.array([coords])
                 prompt['point_labels'] = np.array([labels])
                 prompts.append((prompt, False))  # multimask=False, если есть точки
@@ -125,16 +122,10 @@ class SamController:
             boxes = prompts.get('boxes', [])
             processed_prompts = self._process_box_prompts(boxes)
         elif mode == 'both':
-            point_coords = prompts.get(
-                'point_coords', [None] * len(prompts.get('boxes', []))
-            )
-            point_labels = prompts.get(
-                'point_labels', [None] * len(prompts.get('boxes', []))
-            )
             boxes = prompts.get('boxes', [])
-            processed_prompts = self._process_both_prompts(
-                point_coords, point_labels, boxes
-            )
+            point_coords = prompts.get('point_coords', [])
+            point_labels = prompts.get('point_labels', [])
+            processed_prompts = self._process_both_prompts(point_coords, point_labels, boxes)
         else:
             raise ValueError("Mode must be 'point', 'box' or 'both'.")
 
@@ -156,6 +147,26 @@ class SamController:
                 raise
 
         return results
+
+
+class SegmentationService:
+    def __init__(self, sam_controller: SamController):
+        self._sam = sam_controller
+
+    @property
+    def sam_controller(self) -> SamController:
+        return self._sam
+
+    def segment_objects(self, annotations_info: list[AnnotationInfo]) -> np.ndarray:
+        masks = []
+        for annotation in annotations_info:
+            mode, processed_prompts = self._sam.parse_prompts(annotation.prompt)
+            results = self._sam.predict_from_prompts(mode, processed_prompts)
+            results = [result[np.argmax(scores)] for result, scores, logits in results]
+            masks.extend(results)
+        _, unique_mask = merge_masks(masks)
+        mask_indices, colors = colored_mask_to_indices(unique_mask)
+        return mask_indices
 
 
 if __name__ == '__main__':
@@ -220,8 +231,8 @@ if __name__ == '__main__':
     # results = controller.predict_from_prompts(prompts)
 
     print(len(results))
-    res = [result[np.argmax(scores)] for result, scores, logits in results]
-    mask, unique_mask = merge_masks(res)
+    masks_list = [result[np.argmax(scores)] for result, scores, logits in results]
+    mask, unique_mask = merge_masks(masks_list)
 
     mask_indices, colors = colored_mask_to_indices(unique_mask)
     f = overlay_davis(frame, mask_indices)

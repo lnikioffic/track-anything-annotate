@@ -36,7 +36,7 @@ class MaskMapper:
         # if coherent, no mapping is required
         self.coherent = True
 
-    def clear_lables(self):
+    def clear_labels(self):
         self.labels = []
         self.remappings = {}
 

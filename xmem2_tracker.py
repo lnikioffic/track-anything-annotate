@@ -2,21 +2,21 @@ import cv2
 import numpy as np
 import psutil
 import torch
-from XMem2.inference.inference_core import InferenceCore
-from XMem2.model.network import XMem
-from XMem2.inference.data.mask_mapper import MaskMapper
-from config import XMEM_CONFIG, DEVICE
 from torchvision import transforms
-from XMem2.util.range_transform import im_normalization
-from XMem2.inference.interact.interactive_utils import overlay_davis
+
+from config import DEVICE, XMEM_CONFIG
 from segmenter import Segmenter
-from tools.mask_display import visualize_wb_mask, mask_map
 from tools.contour_detector import getting_coordinates
-from tools.converter import merge_masks, colored_mask_to_indices
+from tools.converter import colored_mask_to_indices, merge_masks
+from tools.mask_display import mask_map, visualize_wb_mask
+from XMem2.inference.data.mask_mapper import MaskMapper
+from XMem2.inference.inference_core import InferenceCore
+from XMem2.inference.interact.interactive_utils import overlay_davis
+from XMem2.model.network import XMem
+from XMem2.util.range_transform import im_normalization
 
 
 class TrackerCore:
-
     name_version = 'XMem2'
 
     def __init__(self, device: str = DEVICE):
@@ -24,33 +24,32 @@ class TrackerCore:
         if self.device.lower() != 'cpu':
             self.network = XMem(XMEM_CONFIG, 'checkpoints/XMem.pth').eval().to('cuda')
         else:
-            self.network = XMem(
-                XMEM_CONFIG, 'checkpoints/XMem.pth', map_location='cpu'
-            ).eval()
+            self.network = XMem(XMEM_CONFIG, 'checkpoints/XMem.pth', map_location='cpu').eval()
         self.processor = InferenceCore(self.network, XMEM_CONFIG)
 
-        self.im_transform = transforms.Compose(
-            [transforms.ToTensor(), im_normalization]
-        )
+        self.im_transform = transforms.Compose([transforms.ToTensor(), im_normalization])
         self.mapper = MaskMapper()
 
     @torch.no_grad()
     def track(
-        self, frame: np.ndarray, mask_segmet: np.ndarray | None = None, exhaustive=False
+        self,
+        frame: np.ndarray,
+        mask_segment: np.ndarray | None = None,
+        exhaustive: bool = False,
     ):
-        if mask_segmet is not None:
-            mask, labels = self.mapper.convert_mask(mask_segmet, exhaustive)
-            mask = torch.Tensor(mask).to(self.device)
+        if mask_segment is not None:
+            mask, labels = self.mapper.convert_mask(mask_segment, exhaustive)
+            mask_tensor = torch.Tensor(mask).to(self.device)
             self.processor.set_all_labels(list(self.mapper.remappings.values()))
         else:
-            mask = None
+            mask_tensor = None
             labels = None
 
         frame_tensor = self.im_transform(frame).to(self.device)
-        probs = self.processor.step(frame_tensor, mask, labels)
+        probs = self.processor.step(frame_tensor, mask_tensor, labels)
 
         out_mask = torch.argmax(probs, dim=0)
-        out_mask = (out_mask.detach().cpu().numpy()).astype(np.uint8)
+        out_mask = out_mask.detach().cpu().numpy().astype(np.uint8)
         final_mask = np.zeros_like(out_mask)
 
         # map back
@@ -62,7 +61,7 @@ class TrackerCore:
     @torch.no_grad()
     def clear_memory(self):
         self.processor.clear_memory()
-        self.mapper.clear_lables()
+        self.mapper.clear_labels()
         torch.cuda.empty_cache()
 
 
@@ -75,7 +74,7 @@ if __name__ == '__main__':
 
     bboxes = [(476, 166, 102, 154), (8, 252, 91, 149), (106, 335, 211, 90)]
     points = [[531, 230], [45, 321], [226, 360], [194, 313]]
-    
+
     # первый енот [(487, 176, 574, 318)] второй самый левый кот [(11, 267, 111, 415)] третий передний кот [(98, 300, 321, 443)]
     # четвертый задний кот [(158, 292, 224, 343)]
     mode = 'point'
@@ -88,35 +87,35 @@ if __name__ == '__main__':
     seg = Segmenter()
     seg.set_image(frame)
 
-    maskss = []
+    masks_list = []
     for point in points:
         prompts = {
             'point_coords': np.array([point]),
             'point_labels': np.array([1]),
         }
         masks, scores, logits = seg.predict(prompts, mode)
-        maskss.append(masks[np.argmax(scores)])
-    _, unique_mask = merge_masks(maskss)
+        masks_list.append(masks[np.argmax(scores)])
+    _, unique_mask = merge_masks(masks_list)
     mask_indices, colors = colored_mask_to_indices(unique_mask)
-    
-    from tools.mask_display import mask_map
+
     from tools.contour_detector import get_filtered_bboxes
-    
+    from tools.mask_display import mask_map
+
     def check_coords(mask):
         coords = []
         for obj in mask_map(mask):
             m = cv2.cvtColor(obj, cv2.COLOR_BGR2GRAY)
             coords.extend(get_filtered_bboxes(m, min_area_ratio=0.001))
         return coords
-    
+
     coords = check_coords(unique_mask)
-    
+
     print(coords)
     print('Классы:', np.unique(mask_indices))
 
     masks = []
     images = []
-    traker = TrackerCore()
+    tracker = TrackerCore()
     frames_to_propagate = 200
     current_frame_index = 0
     cap = cv2.VideoCapture(path)
@@ -132,26 +131,26 @@ if __name__ == '__main__':
             break
 
         if current_frame_index == 0:
-            mask = traker.track(frame_v, mask_indices)
+            mask = tracker.track(frame_v, mask_indices)
             masks.append(mask)
             images.append(frame_v)
         else:
-            mask = traker.track(frame_v)
+            mask = tracker.track(frame_v)
             masks.append(mask)
             images.append(frame_v)
 
         current_frame_index += 1
     video.release()
-    
+
     coords = check_coords(masks[1])
     print(coords)
-    
+
     coords = check_coords(masks[10])
     print(coords)
-    
+
     coords = check_coords(masks[40])
     print(coords)
-    
+
     im3 = visualize_wb_mask(masks[200])
     ima = images[200].copy()
     for m in mask_map(masks[200]):

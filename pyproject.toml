@@ -24,13 +24,11 @@ dependencies = [
 
 
 [tool.ruff]
+line-length = 100
 exclude = ["XMem", "XMem2"]
 
 [tool.ruff.format]
 quote-style = "single"
-
-[tool.ruff.lint]
-ignore = ["E501"]
 
 [project.optional-dependencies]
 cpu = [
