@@ -4,7 +4,6 @@ from typing import Any, Optional
 
 import numpy as np
 
-
 from dataset_export.pipeline import create_dataset
 from interactive_video import InteractVideo
 from sam_controller import SamController
@@ -137,8 +136,6 @@ def main(
     class_names: list[str],
     type_save: str,
 ) -> None:
-
-    # Инициализация интерактивного видео
     video = InteractVideo(str(video_path))
     video.extract_frames()
     video.collect_keypoints()
@@ -148,18 +145,14 @@ def main(
 
     print(f'Collected keypoints from {len(keypoints)} frames')
 
-
-    # Инициализация трекера
     segmenter_controller = SamController()
     tracker_core = TrackerCore()
     tracker = Tracker(segmenter_controller, tracker_core)
 
-    # Создание трекинг сидов
     track_seeds, annotations_info = create_track_seeds_from_keyframes(tracker, keypoints, frames)
 
     print(f'Count of segments: {len(track_seeds)}')
-
-    # Трекинг масок
+    
     tracked_frames, tracked_masks = track_masks_from_seeds(tracker, track_seeds, frames)
 
     # Создание id_map
@@ -178,6 +171,7 @@ def main(
 
     create_dataset(tracked_frames, tracked_masks, class_names, id_map, type_save)
     print('Dataset creation completed')
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Annotation tool')

@@ -7,7 +7,7 @@ from torchvision import transforms
 from config import DEVICE, XMEM_CONFIG
 from segmenter import Segmenter
 from tools.contour_detector import getting_coordinates
-from tools.mask_display import mask_map, visualize_unique_mask, visualize_wb_mask
+from tools.mask_display import mask_map, visualize_wb_mask
 from XMem.inference.data.mask_mapper import MaskMapper
 from XMem.inference.inference_core import InferenceCore
 from XMem.inference.interact.interactive_utils import overlay_davis

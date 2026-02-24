@@ -13,7 +13,7 @@ from dataset_export.utils import generate_class_folder_name
 class CocoDatasetSaver:
     def __init__(
         self, images: list[np.ndarray], masks: list[np.ndarray], class_names: list[str]
-    ):
+    ) -> None:
         self.images = images
         self.masks = masks
         self.class_to_idx = {}

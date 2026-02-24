@@ -6,8 +6,6 @@ import cv2
 import numpy as np
 import progressbar
 
-from tools.annotations_prompts_types import AnnotationVideoInfo
-
 
 class InteractVideo:
     def __init__(self, video_path: str, keyframe_interval: int = 3, max_points_per_frame: int = 10):
@@ -176,7 +174,7 @@ class InteractVideo:
                         (10, 38), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
             cv2.imshow(self._window_name, frame)
 
-    def get_results(self) -> AnnotationVideoInfo:
+    def get_results(self):
         return {
             'frames_path': self.frames_filepaths,
             'keypoints': self.keypoints_per_frame,

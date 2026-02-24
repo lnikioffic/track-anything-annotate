@@ -4,10 +4,10 @@ from typing import Iterator, Optional
 import cv2
 import numpy as np
 import progressbar
+
+
 @dataclass
 class VideoInfo:
-    """Информация о видео."""
-
     fps: float
     frame_count: int
     width: int

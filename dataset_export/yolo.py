@@ -77,6 +77,4 @@ class YoloDatasetSaver:
                 norm_width = w / img_width
                 norm_height = h / img_height
 
-                file.write(
-                    f'{obj["order"]} {norm_xc} {norm_yc} {norm_width} {norm_height}\n'
-                )
+                file.write(f'{obj["order"]} {norm_xc} {norm_yc} {norm_width} {norm_height}\n')

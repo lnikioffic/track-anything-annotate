@@ -34,8 +34,3 @@ class AnnotationInfo:
 class AnnotationItem(TypedDict):
     class_name: str
     prompt: Prompt
-
-
-class AnnotationVideoInfo(TypedDict):
-    frames_path: list[str]
-    keypoints: dict[int, list[tuple[int, int]]]

@@ -1,7 +1,6 @@
 import argparse
 import json
 
-
 from core.video_processor import VideoProcessor
 from dataset_export.pipeline import create_dataset
 from sam_controller import SamController
@@ -23,7 +22,6 @@ def extract_frames(
 def get_info_prompt(
     annotation_item: list[AnnotationItem],
 ) -> tuple[list[str], list[AnnotationInfo]]:
-
     class_names: list[str] = []
     annotations_info: list[AnnotationInfo] = []
     class_names_dict: dict[str, int] = {}

@@ -37,7 +37,7 @@ class Tracker:
         exhaustive: bool = False,
     ) -> list[np.ndarray]:
         masks: list[np.ndarray] = []
-        
+
         for i in tqdm(range(len(frames)), desc='Tracking'):
             current_memory_usage = psutil.virtual_memory().percent
             if current_memory_usage > 90:
@@ -94,14 +94,12 @@ if __name__ == '__main__':
     video = InteractVideo(path, key_interval)
     video.extract_frames()
     video.collect_keypoints()
-    results = video.get_results()
 
     segmenter_controller = SamController()
     tracker_core = TrackerCore()
     tracker = Tracker(segmenter_controller, tracker_core)
 
-    frame_sources = results['frames_path']
-    frames = [cv2.imread(f) for f in frame_sources]
+    frames = video.get_frames()
 
     prompts: Prompt = {
         'mode': 'point',
@@ -170,7 +168,9 @@ if __name__ == '__main__':
     #     masks += m
 
     filename = 'helmet_border.mp4'
-    output = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'XVID'), video.fps, video.frame_size)
+    video_info = video.video_processor.get_video_info()
+    frame_size = (video_info.width, video_info.height)
+    output = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'XVID'), video_info.fps, frame_size)
     for frame, mask in zip(frames, masks):
         f = painter_borders(frame, mask)
         # f = overlay_davis(frame, mask)
