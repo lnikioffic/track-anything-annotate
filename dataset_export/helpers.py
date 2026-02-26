@@ -7,8 +7,12 @@ def extract_objects(mask_unique, id_mapping):
     for mask_id, mask in enumerate(mask_map(mask_unique), 1):
         if mask_id not in id_mapping:
             continue
-        bbox = getting_coordinates(mask)[0]
+        coords_list = getting_coordinates(mask)
 
+        if not coords_list:
+            continue
+
+        bbox = coords_list[0]
         obj_info = id_mapping[mask_id]
         objects.append(
             {
