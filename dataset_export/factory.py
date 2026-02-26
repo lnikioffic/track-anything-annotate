@@ -4,6 +4,7 @@ import numpy as np
 
 from dataset_export.base_saver import DatasetSaver
 from dataset_export.coco import CocoDatasetSaver
+from dataset_export.voc import VocDatasetSaver
 from dataset_export.yolo import YoloDatasetSaver
 
 
@@ -17,6 +18,7 @@ def get_type_save_annotation(
     types_saves: dict[str, Type[DatasetSaver]] = {
         'yolo': YoloDatasetSaver,
         'coco': CocoDatasetSaver,
+        'voc': VocDatasetSaver,
     }
     SaverClass = types_saves.get(type_save.lower())
     if SaverClass is None:
