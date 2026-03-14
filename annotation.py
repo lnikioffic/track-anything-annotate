@@ -7,6 +7,7 @@ import numpy as np
 from dataset_export.pipeline import create_dataset
 from interactive_video import InteractVideo
 from sam_controller import SamController
+from segmenter import Sam2ModelSize, Segmenter
 from tools.annotations_prompts_types import AnnotationInfo, PointPrompt
 from tracker import Tracker
 from xmem2_tracker import TrackerCore
@@ -145,14 +146,15 @@ def main(
 
     print(f'Collected keypoints from {len(keypoints)} frames')
 
-    segmenter_controller = SamController()
+    segmenter = Segmenter(Sam2ModelSize.Large)
+    segmenter_controller = SamController(segmenter)
     tracker_core = TrackerCore()
     tracker = Tracker(segmenter_controller, tracker_core)
 
     track_seeds, annotations_info = create_track_seeds_from_keyframes(tracker, keypoints, frames)
 
     print(f'Count of segments: {len(track_seeds)}')
-    
+
     tracked_frames, tracked_masks = track_masks_from_seeds(tracker, track_seeds, frames)
 
     # Создание id_map

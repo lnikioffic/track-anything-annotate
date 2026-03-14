@@ -1,3 +1,6 @@
+from dataclasses import dataclass
+from enum import Enum
+
 import cv2
 import numpy as np
 import torch
@@ -10,13 +13,38 @@ from tools.mask_display import visualize_unique_mask
 from XMem2.inference.interact.interactive_utils import overlay_davis
 
 
+@dataclass
+class PathModelsSam2:
+    pt: str
+    yaml: str
+
+
+class Sam2ModelSize(Enum):
+    Tiny = PathModelsSam2(
+        pt='checkpoints/sam2.1_hiera_tiny.pt',
+        yaml='configs/sam2.1/sam2.1_hiera_t.yaml',
+    )
+    Small = PathModelsSam2(
+        pt='checkpoints/sam2.1_hiera_small.pt',
+        yaml='configs/sam2.1/sam2.1_hiera_s.yaml',
+    )
+    BasePlus = PathModelsSam2(
+        pt='checkpoints/sam2.1_hiera_base_plus.pt',
+        yaml='configs/sam2.1/sam2.1_hiera_b+.yaml',
+    )
+    Large = PathModelsSam2(
+        pt='checkpoints/sam2.1_hiera_large.pt',
+        yaml='configs/sam2.1/sam2.1_hiera_l.yaml',
+    )
+
+
 class Segmenter:
-    def __init__(self, device: str = DEVICE):
+    def __init__(self, model: Sam2ModelSize, device: str = DEVICE):
         self.device = device
         self.embedded = False
 
-        sam2_checkpoint = 'checkpoints/sam2.1_hiera_large.pt'
-        model_cfg = 'configs/sam2.1/sam2.1_hiera_l.yaml'
+        sam2_checkpoint = model.value.pt
+        model_cfg = model.value.yaml
 
         sam_model = build_sam2(model_cfg, sam2_checkpoint, device=self.device)
         self.predictor = SAM2ImagePredictor(sam_model)
@@ -125,7 +153,7 @@ if __name__ == '__main__':
     # }
 
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    seg = Segmenter()
+    seg = Segmenter(Sam2ModelSize.Large)
     seg.set_image(frame)
 
     masks_list = []

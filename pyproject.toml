@@ -3,19 +3,19 @@ name = "track"
 version = "0.1.0"
 description = "Add your description here"
 readme = "README.md"
-requires-python = ">=3.12"
+requires-python = ">=3.13"
 dependencies = [
-    "gdown>=5.2.0",
-    "gitpython>=3.1.45",
-    "gradio>=5.44.1",
-    "matplotlib>=3.10.6",# 3.9.2"
-    "opencv-python>=4.12.0.88",
+    "gdown>=5.2.1",
+    "gitpython>=3.1.46",
+    "gradio>=6.9.0",
+    "matplotlib>=3.10.8",# 3.9.2"
+    "opencv-python>=4.13.0.92",
     "progressbar2>=4.5.0",
-    "psutil>=7.0.0",
+    "psutil>=7.2.2",
     "sam-2",
-    "setuptools>=78.1.0",
+    "setuptools>=82.0.1",
     "thinplate",
-    "tqdm>=4.67.1",
+    "tqdm>=4.67.3",
 ]
 
 # dependecies for sam2 if have problem with install https://github.com/facebookresearch/sam2.git
@@ -32,30 +32,31 @@ quote-style = "single"
 
 [project.optional-dependencies]
 cpu = [
-  "torch>=2.8.0",
-  "torchvision>=0.23.0",
+  "torch>=2.10.0",
+  "torchvision>=0.25.0",
 ]
-cu129 = [
-  "torch>=2.8.0",
-  "torchvision>=0.23.0",
+gpu = [
+  "torch>=2.10.0",
+  "torchvision>=0.25.0",
 ]
 
 [tool.uv]
 conflicts = [
   [
     { extra = "cpu" },
-    { extra = "cu129" },
+    { extra = "gpu" },
   ],
 ]
+
 
 [tool.uv.sources]
 torch = [
   { index = "pytorch-cpu", extra = "cpu" },
-  { index = "pytorch-cu129", extra = "cu129" },
+  { index = "pytorch-gpu", extra = "gpu" },
 ]
 torchvision = [
   { index = "pytorch-cpu", extra = "cpu" },
-  { index = "pytorch-cu129", extra = "cu129" },
+  { index = "pytorch-gpu", extra = "gpu" },
 ]
 
 # sam-2 = { git = "https://github.com/lnikioffic/sam2.git" }
@@ -68,6 +69,6 @@ url = "https://download.pytorch.org/whl/cpu"
 explicit = true
 
 [[tool.uv.index]]
-name = "pytorch-cu129"
-url = "https://download.pytorch.org/whl/cu129"
+name = "pytorch-gpu"
+url = "https://download.pytorch.org/whl/cu130"
 explicit = true

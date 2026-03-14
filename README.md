@@ -24,7 +24,7 @@ Read this in other languages: [English](README.md) | [Русский](README.ru.
 
 ```bash
 # For CUDA  
-uv sync --extra cu129
+uv sync --extra gpu
 
 # For CPU  
 uv sync --extra cpu
@@ -51,14 +51,23 @@ gradio demo.py
 Type of saving
 - yolo
 - coco
+- voc
+
+Pascal voc format for testing
+
+**If the torch version without cuda is installed when running through uv, then you need to run through python, but this may lead to a loss of performance.**
 
 ```bash
 uv run annotation.py --video-path path_to_video --names-class name_class --type-save yolo
+# or
+python annotation.py --video-path path_to_video --names-class name_class --type-save yolo
 ```
 
 Instructions for creating a dataset via [json](video-test/INSTRUCTION.md)
 ```bash
 uv run annotate_json.py --video-path path_to_video --json-path path_to_json --type-save yolo
+# or
+python annotate_json.py --video-path path_to_video --json-path path_to_json --type-save yolo
 ```
 ---
 
@@ -110,7 +119,7 @@ python annotate_json.py --video-path path_to_video --json-path path_to_json --ty
 *   [x] Tracking single class export in YOLO.
 *   [x] **New export formats:** Adding support for COCO JSON.
 *   [x] **Multi-class annotation:** Ability to track multiple different classes.
-*   [ ] **New export formats:** Adding support for Pascal VOC XML.      
+*   [x] **New export formats:** Adding support for Pascal VOC XML. (Beta)    
 *   [ ] **Image annotation:** Ability to collect and annotate your own dataset based on images.
 
 ## 📚 Citation 

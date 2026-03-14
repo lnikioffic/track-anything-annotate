@@ -6,7 +6,6 @@ from tqdm import tqdm
 from interactive_video import InteractVideo
 from sam_controller import SamController, SegmentationService
 from tools.annotations_prompts_types import AnnotationInfo, Prompt
-from tools.overlay_image import painter_borders
 from XMem2.inference.interact.interactive_utils import overlay_davis
 from xmem2_tracker import TrackerCore
 
@@ -94,8 +93,13 @@ if __name__ == '__main__':
     video = InteractVideo(path, key_interval)
     video.extract_frames()
     video.collect_keypoints()
+    from segmenter import Sam2ModelSize, Segmenter
+    from tools.overlay_image import painter_borders
+    from XMem2.inference.interact.interactive_utils import overlay_davis
 
-    segmenter_controller = SamController()
+    model_size = Sam2ModelSize.Large
+    segmenter = Segmenter(model_size)
+    segmenter_controller = SamController(segmenter)
     tracker_core = TrackerCore()
     tracker = Tracker(segmenter_controller, tracker_core)
 
@@ -170,7 +174,7 @@ if __name__ == '__main__':
     filename = 'helmet_border.mp4'
     video_info = video.video_processor.get_video_info()
     frame_size = (video_info.width, video_info.height)
-    output = cv2.VideoWriter(filename, cv2.VideoWriter_fourcc(*'XVID'), video_info.fps, frame_size)
+    output = cv2.VideoWriter(filename, cv2.VideoWriter.fourcc(*'XVID'), video_info.fps, frame_size)
     for frame, mask in zip(frames, masks):
         f = painter_borders(frame, mask)
         # f = overlay_davis(frame, mask)

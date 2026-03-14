@@ -6,6 +6,7 @@ import numpy as np
 from PIL import Image, ImageDraw
 
 from sam_controller import SamController
+from segmenter import Sam2ModelSize, Segmenter
 from tools.annotations_prompts_types import AnnotationInfo
 from tracker import Tracker
 from xmem2_tracker import TrackerCore
@@ -13,7 +14,8 @@ from xmem2_tracker import TrackerCore
 
 class GradioAnnotator:
     def __init__(self):
-        self.segmenter_controller = SamController()
+        seg = Segmenter(Sam2ModelSize.BasePlus)
+        self.segmenter_controller = SamController(seg)
         self.tracker_core = TrackerCore()
         self.tracker = Tracker(self.segmenter_controller, self.tracker_core)
         self.frames: list[np.ndarray] = []

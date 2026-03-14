@@ -4,13 +4,11 @@ import numpy as np
 from segmenter import Segmenter
 from tools.annotations_prompts_types import AnnotationInfo, PointPrompt, Prompt
 from tools.converter import colored_mask_to_indices, merge_masks
-from tools.mask_display import visualize_unique_mask
-from XMem2.inference.interact.interactive_utils import overlay_davis
 
 
 class SamController:
-    def __init__(self):
-        self.segmenter = Segmenter()
+    def __init__(self, segmenter: Segmenter):
+        self.segmenter = segmenter
         self.is_set_image = False
 
     def set_image(self, image: np.ndarray) -> None:
@@ -170,7 +168,13 @@ class SegmentationService:
 
 
 if __name__ == '__main__':
-    controller = SamController()
+    from segmenter import Sam2ModelSize
+    from tools.mask_display import visualize_unique_mask
+    from XMem2.inference.interact.interactive_utils import overlay_davis
+
+    model_size = Sam2ModelSize.Large
+    segmenter = Segmenter(model_size)
+    controller = SamController(segmenter)
 
     path = 'video-test/truck.jpg'
     path = 'video-test/video.mp4'

@@ -173,3 +173,5 @@ cython_debug/
 */sam2_hiera_tiny.pt
 .gradio
 .ruff_cache
+
+test_*.mp4

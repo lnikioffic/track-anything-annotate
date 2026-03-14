@@ -24,7 +24,7 @@
 
 ```bash
 # For CUDA  
-uv sync --extra cu129
+uv sync --extra gpu
 
 # For CPU  
 uv sync --extra cpu
@@ -51,9 +51,16 @@ gradio demo.py
 Тип сохранения
 - yolo
 - coco
+- voc
+
+Формат Pascal voc в тестировании
+
+**Если при запуске через uv устанавливается версия torch без cuda, то надо запускать через python, но это возможно приведёт к потере производительности.**
 
 ```bash
 uv run annotation.py --video-path path_to_video --names-class name_class --type-save yolo
+# or
+python annotation.py --video-path path_to_video --names-class name_class --type-save yolo
 ```
 
 Для много классовой аннотации и более гибкого выбора объектов рекомендуется аннотирование через `json`
@@ -61,6 +68,8 @@ uv run annotation.py --video-path path_to_video --names-class name_class --type-
 Инструкция для создания датасета через [json](video-test/INSTRUCTION.md)
 ```bash
 uv run annotate_json.py --video-path path_to_video --json-path path_to_json --type-save yolo
+# or
+python annotate_json.py --video-path path_to_video --json-path path_to_json --type-save yolo
 ```
 
 
@@ -113,7 +122,7 @@ python annotation.py
 *   [x] Трекинг одного объекта и экспорт в YOLO.
 *   [x] **Новые форматы экспорта:** Добавление поддержки COCO JSON.
 *   [x] **Мульти-классовая разметка:** Возможность отслеживать несколько разных объектов.
-*   [ ] **Новые форматы экспорта:** Добавление поддержки Pascal VOC XML.      
+*   [x] **Новые форматы экспорта:** Добавление поддержки Pascal VOC XML. (Beta)   
 *   [ ] **Разметка изображений:** Возможность собрать и разметить свой датасет на основе изображений.
 
 ## 📚 Цитирование 

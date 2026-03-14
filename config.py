@@ -1,4 +1,8 @@
+from pathlib import Path
+
 import torch
+
+ML_CORE_ROOT = Path(__file__).resolve().parent
 
 if torch.cuda.is_available():
     print('Using GPU')
