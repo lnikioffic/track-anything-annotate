@@ -8,9 +8,6 @@ from sam2.build_sam import build_sam2
 from sam2.sam2_image_predictor import SAM2ImagePredictor
 
 from config import DEVICE
-from tools.converter import colored_mask_to_indices, merge_masks
-from tools.mask_display import visualize_unique_mask
-from XMem2.inference.interact.interactive_utils import overlay_davis
 
 
 @dataclass
@@ -103,6 +100,10 @@ class Segmenter:
 
 
 if __name__ == '__main__':
+    from tools.converter import colored_mask_to_indices, merge_masks
+    from tools.mask_display import visualize_unique_mask
+    from XMem2.inference.interact.interactive_utils import overlay_davis
+
     path = 'video-test/truck.jpg'
     path = 'video-test/video.mp4'
     video = cv2.VideoCapture(path)

@@ -3,10 +3,8 @@ import numpy as np
 import psutil
 from tqdm import tqdm
 
-from interactive_video import InteractVideo
 from sam_controller import SamController, SegmentationService
 from tools.annotations_prompts_types import AnnotationInfo, Prompt
-from XMem2.inference.interact.interactive_utils import overlay_davis
 from xmem2_tracker import TrackerCore
 
 
@@ -88,14 +86,16 @@ class Tracker:
 
 
 if __name__ == '__main__':
+    from interactive_video import InteractVideo
+    from segmenter import Sam2ModelSize, Segmenter
+    from tools.overlay_image import painter_borders
+    from XMem2.inference.interact.interactive_utils import overlay_davis
+
     path = 'video-test/video.mp4'
     key_interval = 3
     video = InteractVideo(path, key_interval)
     video.extract_frames()
     video.collect_keypoints()
-    from segmenter import Sam2ModelSize, Segmenter
-    from tools.overlay_image import painter_borders
-    from XMem2.inference.interact.interactive_utils import overlay_davis
 
     model_size = Sam2ModelSize.Large
     segmenter = Segmenter(model_size)
@@ -126,51 +126,6 @@ if __name__ == '__main__':
     cv2.destroyAllWindows()
     masks = tracker.track_objects(frames, mask)
 
-    # result = []
-    # print(len(results['keypoints']))
-
-    # for i in range(len(results['keypoints']) - 1):
-    #     current_frame = list(results['keypoints'].keys())[i]
-    #     next_frame = list(results['keypoints'].keys())[i + 1]
-    #     current_coords = results['keypoints'][current_frame]
-
-    #     if current_coords:
-    #         tracker.sam_controller.load_image(results['frames'][int(current_frame)])
-    #         prompts = {
-    #             'mode': 'point',
-    #             'point_coords': current_coords,
-    #             'point_labels': [1] * len(current_coords),
-    #         }
-    #         mask = tracker.select_object(prompts)
-    #         tracker.sam_controller.reset_image()
-    #         result.append(
-    #             {
-    #                 'gap': [current_frame, next_frame],
-    #                 'frame': current_frame,
-    #                 'mask': mask,
-    #             }
-    #         )
-
-    # print(len(result))
-    # masks = []
-    # for res in result:
-    #     current_frame, next_frame = res['gap']
-    #     if res['mask'] is not None:
-    #         print(current_frame, next_frame)
-    #         images = results['frames'][int(current_frame) : int(next_frame)]
-    #         mask = tracker.tracking(images, res['mask'])
-    #         tracker.tracker.clear_memory()
-    #         masks += mask
-    # else:
-    #     print(current_frame, next_frame)
-    #     m = []
-    #     for _ in range(current_frame, next_frame):
-    #         height, width, _ = frames[current_frame].shape
-    #         binary_mask = np.zeros((height, width), dtype=np.uint8)
-    #         binary_mask[:, :] = 1
-    #         m.append(binary_mask)
-    #     masks += m
-
     filename = 'helmet_border.mp4'
     video_info = video.video_processor.get_video_info()
     frame_size = (video_info.width, video_info.height)
@@ -179,7 +134,6 @@ if __name__ == '__main__':
         f = painter_borders(frame, mask)
         # f = overlay_davis(frame, mask)
         output.write(f)
-    # Освобождаем ресурсы
     output.release()
     cv2.destroyAllWindows()
 

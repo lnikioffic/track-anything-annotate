@@ -5,13 +5,8 @@ import torch
 from torchvision import transforms
 
 from config import DEVICE, XMEM_CONFIG
-from segmenter import Segmenter
-from tools.contour_detector import getting_coordinates
-from tools.converter import colored_mask_to_indices, merge_masks
-from tools.mask_display import mask_map, visualize_wb_mask
 from XMem2.inference.data.mask_mapper import MaskMapper
 from XMem2.inference.inference_core import InferenceCore
-from XMem2.inference.interact.interactive_utils import overlay_davis
 from XMem2.model.network import XMem
 from XMem2.util.range_transform import im_normalization
 
@@ -66,6 +61,12 @@ class TrackerCore:
 
 
 if __name__ == '__main__':
+    from segmenter import Sam2ModelSize, Segmenter
+    from tools.contour_detector import getting_coordinates
+    from tools.converter import colored_mask_to_indices, merge_masks
+    from tools.mask_display import mask_map, visualize_wb_mask
+    from XMem2.inference.interact.interactive_utils import overlay_davis
+
     path = 'video-test/video.mp4'
     video = cv2.VideoCapture(path)
     ret, frame = video.read()
@@ -84,7 +85,7 @@ if __name__ == '__main__':
     }
 
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-    seg = Segmenter()
+    seg = Segmenter(Sam2ModelSize.Large)
     seg.set_image(frame)
 
     masks_list = []
@@ -99,7 +100,6 @@ if __name__ == '__main__':
     mask_indices, colors = colored_mask_to_indices(unique_mask)
 
     from tools.contour_detector import get_filtered_bboxes
-    from tools.mask_display import mask_map
 
     def check_coords(mask):
         coords = []
