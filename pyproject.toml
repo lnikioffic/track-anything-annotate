@@ -8,7 +8,7 @@ dependencies = [
     "gdown>=5.2.1",
     "gitpython>=3.1.46",
     "gradio>=6.9.0",
-    "matplotlib>=3.10.8",# 3.9.2"
+    "matplotlib>=3.10.8",
     "opencv-python>=4.13.0.92",
     "progressbar2>=4.5.0",
     "psutil>=7.2.2",
@@ -70,5 +70,5 @@ explicit = true
 
 [[tool.uv.index]]
 name = "pytorch-gpu"
-url = "https://download.pytorch.org/whl/cu130"
+url = "https://download.pytorch.org/whl/cu128"
 explicit = true
