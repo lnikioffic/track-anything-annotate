@@ -8,7 +8,7 @@ def threshold(img, thresh=127, mode='inverse'):
     else:
         thresh_mode = cv2.THRESH_BINARY_INV
 
-    ret, thresh = cv2.threshold(im, thresh, 255, thresh_mode)
+    _, thresh = cv2.threshold(im, thresh, 255, thresh_mode)
     return thresh
 
 
@@ -53,7 +53,7 @@ def get_filtered_bboxes(img, min_area_ratio):
         # Удалите очень мелкие дефекты.
         if cnt_area > min_area_ratio * im_area:
             bboxes.append((x, y, x + w, y + h))
-            
+
     if len(bboxes) > 0:
         min_x = min([bbox[0] for bbox in bboxes])
         min_y = min([bbox[1] for bbox in bboxes])
@@ -64,7 +64,7 @@ def get_filtered_bboxes(img, min_area_ratio):
         combined_height = max_y - min_y
 
         return [(min_x, min_y, min_x + combined_width, min_y + combined_height)]
-        
+
     return bboxes
 
 
@@ -93,12 +93,33 @@ def get_filtered_bboxes_xywh(img, min_area_ratio):
 
         # Возвращаем объединенный прямоугольник.
         return [(min_x, min_y, combined_width, combined_height)]
-    
+
     return bboxes
 
 
+def mask_to_polygons(binary_mask):
+    # Если на вход пришла цветная маска (3 канала), переводим в 1 канал
+    if len(binary_mask.shape) == 3:
+        binary_mask = cv2.cvtColor(binary_mask, cv2.COLOR_BGR2GRAY)
+
+    # На всякий случай делаем threshold, чтобы были только 0 и 255
+    _, binary_mask = cv2.threshold(binary_mask, 10, 255, cv2.THRESH_BINARY)
+
+    contours, _ = cv2.findContours(binary_mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    polygons = []
+    for contour in contours:
+        if len(contour) >= 3:
+            # Сплющиваем массив [N, 1, 2] -> [N*2] и переводим в float для JSON
+            poly = contour.flatten().astype(float).tolist()
+            polygons.append(poly)
+    return polygons
+
+
 def getting_coordinates(image_mask):
-    gray_img = cv2.cvtColor(image_mask, cv2.COLOR_BGR2GRAY)
-    thresh_stags = threshold(gray_img, thresh=110, mode='direct')
-    bboxes = get_filtered_bboxes_xywh(thresh_stags, min_area_ratio=0.001)
+    if len(image_mask.shape) == 3:
+        gray = cv2.cvtColor(image_mask, cv2.COLOR_BGR2GRAY)
+    else:
+        gray = image_mask
+    thresh = threshold(gray, thresh=50, mode='direct')
+    bboxes = get_filtered_bboxes_xywh(thresh, min_area_ratio=0.001)
     return bboxes

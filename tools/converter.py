@@ -4,35 +4,33 @@ import numpy as np
 
 def merge_masks(masks):
     if isinstance(masks, list):
-        masks = np.array(masks)
+        masks = np.stack(masks)
 
     # Убедимся, что маски имеют корректную форму
-    if len(masks.shape) != 3:
-        raise ValueError(
-            'Маски должны быть представлены в виде массива размерности (N, H, W).'
-        )
+    if masks.ndim != 3:
+        raise ValueError('Маски должны быть представлены в виде массива размерности (N, H, W).')
     N, H, W = masks.shape
 
     # Создаем пустое цветное изображение
     mask_colored = np.zeros((H, W, 3), dtype=np.uint8)
     # Создаем список случайных цветов для каждой маски
-    colors = [tuple(np.random.randint(0, 255, size=3)) for _ in range(N)]
+    colors = np.random.randint(0, 255, size=(N, 3), dtype=np.uint8)
     # Создаем уникальную индексированную маску
     unique_mask = np.zeros((H, W), dtype=np.uint8)
 
     # binary_mask = np.any(masks > 0, axis=0).astype(np.uint8) * 255
 
     for i in range(N):
-        # Создаем цветную маску для текущей области
-        color_mask = np.zeros_like(mask_colored)
-        color_mask[masks[i] > 0] = colors[i]
-        # Накладываем цветную маску на общее изображение
-        mask_colored = cv2.addWeighted(mask_colored, 1, color_mask, 1, 0.0)
+        mask_bool = masks[i] > 0
+        # Если маска пустая, пропускаем итерацию
+        if not np.any(mask_bool):
+            continue
 
-        # Присваиваем уникальные значения для текущей области в индексированной маске
-        unique_mask[masks[i] > 0] = (
-            i + 1
-        )  # Используем i+1, чтобы избежать нулевого значения
+        idx = i + 1
+        # Заполняем индексную маску (последняя маска в списке будет "сверху")
+        unique_mask[mask_bool] = idx
+        # Заполняем цветом напрямую (это в разы быстрее cv2.addWeighted)
+        mask_colored[mask_bool] = colors[i]
 
     return mask_colored, unique_mask
 

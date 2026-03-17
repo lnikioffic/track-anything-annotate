@@ -1,4 +1,4 @@
-from tools.contour_detector import getting_coordinates
+from tools.contour_detector import getting_coordinates, mask_to_polygons
 from tools.mask_display import mask_map
 
 
@@ -8,6 +8,7 @@ def extract_objects(mask_unique, id_mapping):
         if mask_id not in id_mapping:
             continue
         coords_list = getting_coordinates(mask)
+        segmentation = mask_to_polygons(mask)
 
         if not coords_list:
             continue
@@ -20,6 +21,7 @@ def extract_objects(mask_unique, id_mapping):
                 'class_name': obj_info['class'],
                 'bbox': bbox,
                 'order': obj_info['order'],
+                'segmentation': segmentation,
             }
         )
 

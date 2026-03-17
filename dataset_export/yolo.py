@@ -55,26 +55,23 @@ class YoloDatasetSaver:
 
     def _save_yolo_annotation(
         self,
-        images: np.ndarray,
+        image: np.ndarray,
         mask_unique: np.ndarray,
         file_path: str,
         id_mapping,
     ):
-        img_height = images.shape[0]
-        img_width = images.shape[1]
+        img_h, img_w = image.shape[:2]
         with open(file_path, 'w', encoding='utf-8') as file:
             result_objects = extract_objects(mask_unique, id_mapping)
 
             for obj in result_objects:
-                x, y = obj['bbox'][0], obj['bbox'][1]
-                w, h = obj['bbox'][2], obj['bbox'][3]
+                x, y, w, h = obj['bbox']
 
-                x_center = x + w / 2
-                y_center = y + h / 2
+                class_idx = self.class_to_idx.get(obj['class_name'], 0)
 
-                norm_xc = x_center / img_width
-                norm_yc = y_center / img_height
-                norm_width = w / img_width
-                norm_height = h / img_height
+                x_center = (x + w / 2) / img_w
+                y_center = (y + h / 2) / img_h
+                norm_w = w / img_w
+                norm_h = h / img_h
 
-                file.write(f'{obj["order"]} {norm_xc} {norm_yc} {norm_width} {norm_height}\n')
+                file.write(f'{class_idx} {x_center:.6f} {y_center:.6f} {norm_w:.6f} {norm_h:.6f}\n')
