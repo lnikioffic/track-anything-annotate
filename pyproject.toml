@@ -13,6 +13,7 @@ dependencies = [
     "progressbar2>=4.5.0",
     "psutil>=7.2.2",
     "sam-2",
+    "scikit-image>=0.26.0",
     "setuptools>=82.0.1",
     "thinplate",
     "tqdm>=4.67.3",

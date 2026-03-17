@@ -174,4 +174,5 @@ cython_debug/
 .gradio
 .ruff_cache
 
+video-test/*.zip
 test_*.mp4

@@ -1,10 +1,14 @@
 import cv2
 import numpy as np
 import psutil
+import torch
 from tqdm import tqdm
 
 from sam_controller import SamController, SegmentationService
 from tools.annotations_prompts_types import AnnotationInfo, Prompt
+from tools.converter import colored_mask_to_indices, merge_masks
+from tools.mask_display import mask_map
+from tools.utils import mask_center
 from xmem2_tracker import TrackerCore
 
 
@@ -27,6 +31,29 @@ class Tracker:
     def segment_objects(self, annotations_info: list[AnnotationInfo]) -> np.ndarray:
         return self._segmentation.segment_objects(annotations_info)
 
+    def sam_ref(self, frame, mask):
+        self.sam_controller.reset_image()
+        centers = []
+        for m in mask_map(mask):
+            centers.append(mask_center(m))
+
+        print(centers)
+        prompts = []
+        for center in centers:
+            prompt = {
+                'point_coords': np.array([center]),
+                'point_labels': np.array([1]),
+            }
+            prompts.append((prompt, False))
+
+        self.sam_controller.set_image(frame)
+        results = self.sam_controller.predict_from_prompts('point', prompts)
+        results = [result[np.argmax(scores)] for result, scores, logits in results]
+        _, unique_mask = merge_masks(results)
+        mask_indices, _ = colored_mask_to_indices(unique_mask)
+        self.sam_controller.reset_image()
+        return mask_indices
+
     def track_objects(
         self,
         frames: list[np.ndarray],
@@ -39,17 +66,27 @@ class Tracker:
             current_memory_usage = psutil.virtual_memory().percent
             if current_memory_usage > 90:
                 break
+
+            is_last_frame = i == len(frames) - 1
             """
              TODO: улучшение точности
                 - надо проверять сколько масок в трекере
                 - смотреть сколько объектов обнаруживается
                 - если они не совпадают добавлять к новым маскам маску из трекера
             """
+            # if i in (0, 5, 10):
+            #     if masks:
+            #         m = masks[-1].copy()
+            #         mask_new = self.sam_ref(frames[i], m)
+            #         template_mask = mask_new
+            #         exhaustive = True
+            if i % 10 == 0:
+                torch.cuda.empty_cache()
             if i == 0:
-                mask = self.tracker.track(frames[i], template_mask, exhaustive)
+                mask = self.tracker.track(frames[i], template_mask, exhaustive, end=is_last_frame)
                 masks.append(mask)
             else:
-                mask = self.tracker.track(frames[i])
+                mask = self.tracker.track(frames[i], end=is_last_frame)
                 masks.append(mask)
         return masks
 

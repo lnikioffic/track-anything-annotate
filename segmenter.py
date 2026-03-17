@@ -47,7 +47,7 @@ class Segmenter:
         self.predictor = SAM2ImagePredictor(sam_model)
         self.original_image: np.ndarray | None = None
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def set_image(self, image: np.ndarray) -> None:
         if self.embedded:
             raise RuntimeError('Image already set. Call reset_image() first.')
@@ -56,13 +56,13 @@ class Segmenter:
         self.predictor.set_image(image)
         self.embedded = True
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def reset_image(self) -> None:
         self.predictor.reset_predictor()
         self.embedded = False
         self.original_image = None
 
-    @torch.no_grad()
+    @torch.inference_mode()
     def predict(
         self,
         prompt: dict,
@@ -188,7 +188,15 @@ if __name__ == '__main__':
             mask = mask.squeeze(0).astype(np.uint8)
             masks_list.append(mask)
 
-    mask, unique_mask = merge_masks(masks_list)
+    from tools.utils import clean_mask, mask_center
+
+    masks_list_clear = []
+    for mask in masks_list:
+        print(mask_center(mask))
+        mask = clean_mask(mask)
+        masks_list_clear.append(mask)
+
+    mask, unique_mask = merge_masks(masks_list_clear)
 
     mask_indices, colors = colored_mask_to_indices(unique_mask)
     print('Классы:', np.unique(mask_indices))

@@ -15,9 +15,9 @@ XMEM_CONFIG = {
     'enable_long_term': True,
     'enable_long_term_count_usage': True,
     'num_prototypes': 128,
-    'min_mid_term_frames': 15,
-    'max_mid_term_frames': 20,
-    'max_long_term_elements': 2000,
+    'min_mid_term_frames': 10,
+    'max_mid_term_frames': 15,
+    'max_long_term_elements': 5000,
     'size': 480,
     'device': DEVICE,
 }
