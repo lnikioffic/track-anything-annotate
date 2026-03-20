@@ -10,7 +10,7 @@ from tools.converter import colored_mask_to_indices, merge_masks
 from tools.mask_display import mask_map
 from tools.utils import mask_center
 from xmem2_tracker import TrackerCore
-
+import gc
 
 class Tracker:
     def __init__(self, segmenter_controller: SamController, tracker_core: TrackerCore):
@@ -81,7 +81,11 @@ class Tracker:
             #         template_mask = mask_new
             #         exhaustive = True
             if i % 10 == 0:
-                torch.cuda.empty_cache()
+                if self.tracker.is_cuda:
+                    torch.cuda.empty_cache()
+                    gc.collect()
+                else:
+                    gc.collect()
             if i == 0:
                 mask = self.tracker.track(frames[i], template_mask, exhaustive, end=is_last_frame)
                 masks.append(mask)

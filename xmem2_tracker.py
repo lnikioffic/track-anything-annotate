@@ -16,6 +16,7 @@ class TrackerCore:
 
     def __init__(self, device: str = DEVICE):
         self.device = torch.device(device)
+        self.is_cuda = self.device.type == 'cuda'
         # if self.device.lower() != 'cpu':
         #     self.network = XMem(XMEM_CONFIG, 'checkpoints/XMem.pth').eval().to('cuda')
         # else:
@@ -40,7 +41,6 @@ class TrackerCore:
         exhaustive: bool = False,
         end: bool = False,
     ):
-        is_cuda = self.device.type == 'cuda'
 
         mask_tensor = None
         labels = None
@@ -50,9 +50,9 @@ class TrackerCore:
             mask_tensor = torch.as_tensor(mask, device=self.device).float()
             self.processor.set_all_labels(list(self.mapper.remappings.values()))
 
-        frame_tensor = self.im_transform(frame).to(self.device, non_blocking=is_cuda)
+        frame_tensor = self.im_transform(frame).to(self.device, non_blocking=self.is_cuda)
 
-        if is_cuda:
+        if self.is_cuda:
             with torch.autocast(device_type='cuda', dtype=torch.float16, enabled=True):
                 probs = self.processor.step(frame_tensor, mask_tensor, labels, end=end)
                 out_mask_acc = torch.argmax(probs, dim=0)
