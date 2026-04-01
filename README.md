@@ -55,19 +55,16 @@ Type of saving
 
 Pascal voc format for testing
 
-**If the torch version without cuda is installed when running through uv, then you need to run through python, but this may lead to a loss of performance.**
 
 ```bash
-uv run annotation.py --video-path path_to_video --names-class name_class --type-save yolo
+uv run --extra gpu annotation.py --video-path path_to_video --names-class name_class --type-save yolo
 # or
 python annotation.py --video-path path_to_video --names-class name_class --type-save yolo
 ```
 
 Instructions for creating a dataset via [json](video-test/INSTRUCTION.md)
 ```bash
-uv run annotate_json.py --video-path path_to_video --json-path path_to_json --type-save yolo
-# or
-python annotate_json.py --video-path path_to_video --json-path path_to_json --type-save yolo
+uv run --extra gpu annotate_json.py --video-path path_to_video --json-path path_to_json --type-save yolo
 ```
 ---
 
@@ -134,3 +131,7 @@ If you use this project in your work, please cite the paper:
     year={2025}
 }
 ```
+
+## 👏 Acknowledgements
+
+The project is based on [Segment Anything 2](https://github.com/Segment-Anything/segment-anything-2), [XMem](https://github.com/hkchengrex/XMem) and [XMem2](https://github.com/walidwll/Xmem2). Thanks for the authors for their efforts.

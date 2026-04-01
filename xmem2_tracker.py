@@ -73,7 +73,7 @@ class TrackerCore:
 
     @torch.inference_mode()
     def clear_memory(self):
-        self.processor.clear_memory(keep_permanent=False)
+        self.processor.clear_memory(keep_permanent=True)
         self.mapper.clear_labels()
         if torch.cuda.is_available():
             torch.cuda.empty_cache()

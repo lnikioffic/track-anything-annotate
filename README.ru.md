@@ -55,21 +55,15 @@ gradio demo.py
 
 Формат Pascal voc в тестировании
 
-**Если при запуске через uv устанавливается версия torch без cuda, то надо запускать через python, но это возможно приведёт к потере производительности.**
-
 ```bash
-uv run annotation.py --video-path path_to_video --names-class name_class --type-save yolo
-# or
-python annotation.py --video-path path_to_video --names-class name_class --type-save yolo
+uv run --extra gpu annotation.py --video-path path_to_video --names-class name_class --type-save yolo
 ```
 
 Для много классовой аннотации и более гибкого выбора объектов рекомендуется аннотирование через `json`
 
 Инструкция для создания датасета через [json](video-test/INSTRUCTION.md)
 ```bash
-uv run annotate_json.py --video-path path_to_video --json-path path_to_json --type-save yolo
-# or
-python annotate_json.py --video-path path_to_video --json-path path_to_json --type-save yolo
+uv run --extra gpu annotate_json.py --video-path path_to_video --json-path path_to_json --type-save yolo
 ```
 
 
@@ -137,3 +131,7 @@ python annotation.py
     year={2025}
 }
 ```
+
+## 👏 Признание
+
+Проект основан на [Segment Anything 2](https://github.com/Segment-Anything/segment-anything-2), [XMem](https://github.com/hkchengrex/XMem) и [XMem2](https://github.com/walidwll/Xmem2). Спасибо авторам за их усилия.
